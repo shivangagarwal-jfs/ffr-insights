@@ -709,17 +709,6 @@ def nonnull_list(v: Any) -> list:
     return v if isinstance(v, list) else []
 
 
-def normalize_overall_summary_short(raw: Any) -> dict[str, str]:
-    """Normalize overall_summary_short — LLM JSON often sets it to null or a bare string."""
-    if isinstance(raw, str):
-        return {"title": "", "summary": sanitize_llm_prose(raw)}
-    d = nonnull_dict(raw)
-    return {
-        "title": sanitize_llm_prose(str(d.get("title", ""))),
-        "summary": sanitize_llm_prose(str(d.get("summary", ""))),
-    }
-
-
 # ── Pillar-split prompt helpers (cached in memory) ───────────────────────────
 
 

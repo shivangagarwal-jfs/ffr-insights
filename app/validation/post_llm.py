@@ -185,6 +185,11 @@ def sanitize_llm_prose(text: str) -> str:
     return s.strip()
 
 
+def strip_trailing_period(text: str) -> str:
+    """Remove a single trailing full-stop, if present."""
+    return text[:-1].rstrip() if text.endswith(".") else text
+
+
 BANNED_TERMS: list[tuple[re.Pattern[str], str, str]] = [
     (
         re.compile(r"\bdeterministic\b", re.IGNORECASE),
@@ -462,24 +467,12 @@ def _concat_output_text(response: Mapping[str, Any]) -> str:
             parts.append(str(item))
     else:
         parts.append(str(overall or ""))
-    short = data.get("overall_summary_short")
-    if isinstance(short, Mapping):
-        parts.append(str(short.get("title") or ""))
-        parts.append(str(short.get("summary") or ""))
-    levers = data.get("overall_levers")
-    if isinstance(levers, list):
-        for lv in levers:
-            if isinstance(lv, Mapping):
-                parts.append(str(lv.get("improvement_hint") or ""))
     return "\n".join(parts)
 
 
 # --- Summary word-count limits ---
 
 METRIC_SUMMARY_MAX_WORDS = 25
-SHORT_TITLE_MAX_WORDS = 6
-SHORT_SUMMARY_MAX_WORDS = 23
-LEVER_HINT_MAX_WORDS = 25
 
 
 def _validate_summary_word_counts(data: Mapping[str, Any]) -> list[ValidationIssue]:
@@ -494,43 +487,6 @@ def _validate_summary_word_counts(data: Mapping[str, Any]) -> list[ValidationIss
                     f"word_count.metric_summaries.{key}",
                     f"Metric summary '{key}' has {n} words; must not exceed {METRIC_SUMMARY_MAX_WORDS}.",
                     expected=f"≤{METRIC_SUMMARY_MAX_WORDS}", severity="error",
-                ))
-    short = data.get("overall_summary_short")
-    if isinstance(short, Mapping):
-        title = str(short.get("title") or "").strip()
-        tn = word_count(title)
-        if tn > SHORT_TITLE_MAX_WORDS:
-            issues.append(ValidationIssue(
-                "word_count.overall_summary_short.title",
-                f"Title has {tn} words; must not exceed {SHORT_TITLE_MAX_WORDS}.",
-                expected=f"≤{SHORT_TITLE_MAX_WORDS}", severity="error",
-            ))
-        summ = str(short.get("summary") or "").strip()
-        sn = word_count(summ)
-        if sn > SHORT_SUMMARY_MAX_WORDS:
-            issues.append(ValidationIssue(
-                "word_count.overall_summary_short.summary",
-                f"Short summary has {sn} words; must not exceed {SHORT_SUMMARY_MAX_WORDS}.",
-                expected=f"≤{SHORT_SUMMARY_MAX_WORDS}", severity="error",
-            ))
-    elif data.get("overall_summary_short") is not None:
-        issues.append(ValidationIssue(
-            "word_count.overall_summary_short",
-            "overall_summary_short must be an object with title and summary when present.",
-            severity="error",
-        ))
-    levers = data.get("overall_levers")
-    if isinstance(levers, list):
-        for i, lv in enumerate(levers):
-            if not isinstance(lv, Mapping):
-                continue
-            hint = str(lv.get("improvement_hint") or "").strip()
-            hn = word_count(hint)
-            if hn > LEVER_HINT_MAX_WORDS:
-                issues.append(ValidationIssue(
-                    f"word_count.overall_levers[{i}]",
-                    f"overall_levers[{i}].improvement_hint has {hn} words; must not exceed {LEVER_HINT_MAX_WORDS}.",
-                    expected=f"≤{LEVER_HINT_MAX_WORDS}", severity="error",
                 ))
     return issues
 

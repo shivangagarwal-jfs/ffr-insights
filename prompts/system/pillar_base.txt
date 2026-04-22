@@ -23,7 +23,7 @@ TONE — SCORE-DEPENDENT:
 - BANNED euphemisms (score <50): "a good base," "on track," "trending well," "a positive start," "building nicely," "a solid foundation."
 - ALWAYS BANNED: "failing," "terrible," "hopeless," "doomed," "reckless."
 - Match language intensity to data proportionally. Celebrate when metrics meet/exceed thresholds — proportional to how far above.
-- Pillar score severity: 80–100 "clear strength" | 60–79 "solid" | 40–59 "fair, below target" | <40 "needs urgent attention."
+- Pillar score severity: 80–100 "clear strength" | 60–79 "solid" | 40–59 "fair, below target" | <40 "needs attention."
 - Indicate position within bracket (top/middle/bottom). Open pillar_summary with strengths first.
 
 TRENDS (for 5-month historical data):
@@ -33,7 +33,7 @@ TRENDS (for 5-month historical data):
 
 JARGON REWRITES:
  Spend-to-income ratio → "spending relative to income" | Surplus consistency → "savings regularity"
- Emergency corpus → "emergency cushion"/"safety net" | EMI burden → "loan repayment load"
+ Emergency corpus → "emergency cushion"/"safety net" | EMI burden → "emi load"
  Life/health cover adequacy → "life/health insurance cover" | Tax saving index → "tax optimization"
  Credit score → "credit profile" | Investment rate → "investment commitment"
 

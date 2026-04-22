@@ -3,7 +3,7 @@
 Supports two modes:
   - **monolithic** (default): single LLM call with the full prompt.
   - **pillar_split**: independent LLM calls per pillar + a synthesis call for
-    overall_summary / overall_summary_short / overall_levers.
+    overall_summary.
 """
 
 from __future__ import annotations
@@ -24,8 +24,6 @@ from app.core.llm import (
     load_prompt,
     load_synthesis_prompt,
     nonnull_dict,
-    nonnull_list,
-    normalize_overall_summary_short,
     parse_llm_json,
 )
 from app.core.tracing import get_tracer
@@ -41,6 +39,7 @@ from app.models.common import VALID_PILLARS
 from app.validation.post_llm import (
     ValidationReport,
     sanitize_llm_prose,
+    strip_trailing_period,
     validate_pillar_summary_response,
 )
 
@@ -80,12 +79,10 @@ def _build_scope_preamble(unlocked: set[str]) -> str:
         '   - "data is not available"\n'
         '   - "provided data"\n'
         '   - "unlocked" / "not unlocked" / "locked" (gamified — use scope language instead)\n'
-        "4. overall_summary_short — reference ONLY in-scope pillars.\n"
-        "5. overall_levers — include ONLY in-scope pillars.\n"
-        "6. Data fields for out-of-scope pillars are intentionally blanked out. "
+        "4. Data fields for out-of-scope pillars are intentionally blanked out. "
         "If you see empty values for certain metrics, do NOT speculate about them "
         "or suggest the user address them.\n"
-        "7. The ALL-PILLARS COVERAGE CHECK applies ONLY to in-scope pillars — "
+        "5. The ALL-PILLARS COVERAGE CHECK applies ONLY to in-scope pillars — "
         "you are NOT required to cover out-of-scope pillars beyond the single "
         "scope acknowledgement sentence.\n\n"
     )
@@ -115,29 +112,17 @@ def _filter_llm_result(parsed: dict, unlocked: set[str]) -> dict:
         if k in unlocked
     }
 
-    unlocked_title = {p.title() for p in unlocked}
-    overall_levers = [
-        {
-            "pillar": lv.get("pillar", ""),
-            "improvement_hint": sanitize_llm_prose(str(lv.get("improvement_hint", ""))),
-        }
-        for lv in nonnull_list(parsed.get("overall_levers"))
-        if isinstance(lv, dict) and lv.get("pillar") in unlocked_title
-    ]
-
-    short = normalize_overall_summary_short(parsed.get("overall_summary_short"))
-
     raw_overall = parsed.get("overall_summary")
     if isinstance(raw_overall, dict):
         overall_summary = {
             "overview": sanitize_llm_prose(str(raw_overall.get("overview") or "")),
             "whats_going_well": [
-                sanitize_llm_prose(str(item))
+                strip_trailing_period(sanitize_llm_prose(str(item)))
                 for item in (raw_overall.get("whats_going_well") or [])
                 if isinstance(item, str) and item.strip()
             ],
             "whats_needs_attention": [
-                sanitize_llm_prose(str(item))
+                strip_trailing_period(sanitize_llm_prose(str(item)))
                 for item in (raw_overall.get("whats_needs_attention") or [])
                 if isinstance(item, str) and item.strip()
             ],
@@ -154,8 +139,6 @@ def _filter_llm_result(parsed: dict, unlocked: set[str]) -> dict:
         "metric_summaries_ui": metric_summaries_ui,
         "pillar_summaries": pillar_summaries,
         "overall_summary": overall_summary,
-        "overall_summary_short": short,
-        "overall_levers": overall_levers,
     }
 
 
@@ -741,7 +724,7 @@ async def _call_synthesis(
     *,
     request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Run the synthesis LLM call to produce overall_summary, overall_summary_short, overall_levers.
+    """Run the synthesis LLM call to produce overall_summary.
 
     Raises LLMValidationError if no valid output is produced after all retries.
     """
@@ -791,18 +774,17 @@ async def _call_synthesis(
                 print("======================================\n", flush=True)
 
             if parsed:
-                short = normalize_overall_summary_short(parsed.get("overall_summary_short"))
                 raw_overall = parsed.get("overall_summary")
                 if isinstance(raw_overall, dict):
                     overall_summary = {
                         "overview": sanitize_llm_prose(str(raw_overall.get("overview") or "")),
                         "whats_going_well": [
-                            sanitize_llm_prose(str(item))
+                            strip_trailing_period(sanitize_llm_prose(str(item)))
                             for item in (raw_overall.get("whats_going_well") or [])
                             if isinstance(item, str) and item.strip()
                         ],
                         "whats_needs_attention": [
-                            sanitize_llm_prose(str(item))
+                            strip_trailing_period(sanitize_llm_prose(str(item)))
                             for item in (raw_overall.get("whats_needs_attention") or [])
                             if isinstance(item, str) and item.strip()
                         ],
@@ -814,19 +796,8 @@ async def _call_synthesis(
                         "whats_needs_attention": [],
                     }
 
-                overall_levers = [
-                    {
-                        "pillar": lv.get("pillar", ""),
-                        "improvement_hint": sanitize_llm_prose(str(lv.get("improvement_hint", ""))),
-                    }
-                    for lv in nonnull_list(parsed.get("overall_levers"))
-                    if isinstance(lv, dict)
-                ]
-
                 return {
                     "overall_summary": overall_summary,
-                    "overall_summary_short": short,
-                    "overall_levers": overall_levers,
                 }
 
             if attempt < max_attempts:
@@ -932,6 +903,4 @@ async def run_pillar_split_summary(
             "metric_summaries_ui": merged_metric_summaries_ui,
             "pillar_summaries": merged_pillar_summaries,
             "overall_summary": synthesis["overall_summary"],
-            "overall_summary_short": synthesis["overall_summary_short"],
-            "overall_levers": synthesis["overall_levers"],
         }
