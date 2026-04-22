@@ -23,6 +23,7 @@ CORE RULES (STRICT)
 - Do NOT make assumptions beyond the data
 - If data is weak or missing, state: "Insufficient data available for insight generation"
 - Avoid judgmental language (e.g., "bad", "irresponsible")
+- Always use Indian English language.
 
 -------------------------------------
 COMPLIANCE BOUNDARIES (STRICT — Indian regulatory context)

@@ -1,7 +1,7 @@
 {
     "metadata": {
         "request_id": "b3e1f7a2-4444-4bbb-9999-111111111107",
-        "timestamp": "2026-04-20T15:13:30.996326+00:00",
+        "timestamp": "2026-04-22T14:21:09.969362+00:00",
         "version": "1.0.0",
         "source": "pillar_summary_api",
         "channel": "api"
@@ -9,40 +9,33 @@
     "error": null,
     "data": {
         "metric_summaries_ui": {
-            "spend_to_income_ratio": "Despite moderately variable income, your healthy spending ratio consistently leaves room for savings and achieving financial goals.",
-            "saving_consistency": "Inconsistent savings are often linked to spending spikes; reviewing entertainment expenses could help improve your regularity.",
-            "emergency_corpus": "A significantly low emergency cushion leaves you vulnerable to unexpected events, potentially impacting your financial stability.",
-            "emi_burden": "Keeping your loan repayments closer to 20% of your income frees up cash flow, providing more financial flexibility for other goals.",
-            "credit_score": "A consistently improving credit score, currently at 726, enhances your ability to access better loan terms and lower interest rates.",
-            "life_insurance": "Life cover falls short of the recommended level, but your positive monthly surplus provides a clear path to gradually close this gap.",
-            "health_insurance": "Your health cover is slightly below the ideal, yet your available monthly surplus offers a direct way to bridge this small gap.",
-            "tax_filing_status": "Maintaining a current tax filing status is crucial for financial compliance and avoiding potential penalties. It also forms the basis for claiming refunds.",
-            "tax_savings": "Improving tax optimization can significantly reduce your tax liability, freeing up more income for savings or investments. This directly impacts your net income.",
-            "investment_rate": "Increasing your investment rate is key to accelerating wealth creation and achieving your financial aspirations sooner.",
-            "portfolio_diversification": "A well-diversified portfolio helps spread risk and provides stability, protecting your wealth across various market conditions.",
-            "portfolio_overlap": "Understanding fund overlap is important to avoid unintended concentration risks and ensure efficient diversification within your portfolio."
-        },
-        "metric_ctas": {
-            "spend_to_income_ratio": {
-                "text": "Review spends",
-                "action": "jio://budget/create"
-            }
+            "spend_to_income_ratio": "Maintaining your spending within a healthy 60% of your income provides a stable base for financial planning, despite your moderately variable earnings.",
+            "saving_consistency": "Reviewing expenses like entertainment, which saw spikes in some months, could help improve your savings regularity and build a stronger financial buffer.",
+            "emergency_corpus": "Strengthening your emergency cushion to cover more months of expenses provides a vital safety net, offering greater peace of mind during unexpected financial events.",
+            "emi_burden": "Maintaining a manageable loan repayment share frees up more of your income, providing greater flexibility for savings or other financial goals.",
+            "credit_score": "A rising credit score like yours enhances your creditworthiness, potentially leading to better terms on future loans and broader financial opportunities.",
+            "life_insurance": "Life cover is below the recommended level, but your positive monthly surplus provides a clear path to gradually strengthen this protection for your dependents.",
+            "health_insurance": "Your health cover is near the recommended level, and your consistent monthly surplus offers a good opportunity to build it up further.",
+            "tax_filing_status": "Maintaining current tax filing status helps avoid penalties and ensures you are compliant with regulations, providing a clear financial record.",
+            "tax_savings": "Exploring further tax-saving instruments could help reduce your taxable income, potentially increasing your take-home earnings and overall financial efficiency.",
+            "investment_rate": "Increasing your investment rate could significantly accelerate your wealth creation journey, building a stronger financial future over time.",
+            "portfolio_diversification": "A diversified portfolio helps manage risk by spreading your investments across different asset classes, contributing to more stable growth.",
+            "portfolio_overlap": "Without fund-level overlap data, it is challenging to assess potential redundancies, which could impact overall portfolio efficiency and returns."
         },
         "overall_summary": {
-            "overview": "Your spending is well-managed at 60% of income, providing a stable financial base. However, improving your emergency cushion, loan load, and tax efficiency are key priorities.",
+            "overview": "Your spending is well-managed at 60% of income, providing a solid base to grow your protection, tax efficiency, and investments.",
             "whats_going_well": [
-                "Your investment portfolio is well-diversified across multiple asset classes, a strong strategy for managing risk.",
-                "Your protection is nearly adequate, with life and health cover close to recommended levels.",
-                "Your credit profile is in good standing at 726 and has shown consistent improvement recently.",
-                "Your spend-to-income ratio is healthy at 60%, indicating effective control over your monthly expenses."
+                "Your investments are thoughtfully spread across four asset classes, providing a stable foundation for long-term growth",
+                "You manage your expenses well, keeping them at 60% of your income, which creates room for financial progress",
+                "Your credit profile is strong at 726, opening doors for better terms on future financial products"
             ],
             "whats_needs_attention": [
-                "Your emergency cushion is significantly low at 2.5 months, leaving you vulnerable to unexpected events.",
-                "Your tax optimization is at an early stage (1.8/5), with substantial unused potential to reduce your liability.",
-                "Your loan repayment load is slightly high at 22% of income, placing pressure on your monthly cash flow.",
-                "Savings consistency is moderate (7 out of 12 months), impacted by spending increases and income fluctuations.",
-                "Your investment commitment is currently modest at 11% of income, limiting your wealth accumulation pace.",
-                "Life cover (0.88x) and health cover (0.95x) are slightly below recommended levels, needing minor adjustments."
+                "Your emergency cushion covers 2.5 months of expenses; building this to 3-6 months would provide a stronger safety net for your household",
+                "Your life cover is at 0.88 times the recommended level; increasing this would provide greater financial security for your two dependents",
+                "Your tax optimization is 3 out of 5, meaning there's a clear opportunity to enhance your take-home income",
+                "Your investment commitment is 11% of your income; increasing this would significantly accelerate your wealth creation journey",
+                "While manageable, your loan repayments at 22% of income are moderate, and reducing this could free up more funds for your goals",
+                "Your health cover is at 0.95 times the recommended level; boosting this would strengthen your family's financial resilience"
             ]
         }
     }

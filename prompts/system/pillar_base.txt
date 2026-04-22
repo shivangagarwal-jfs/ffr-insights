@@ -39,6 +39,8 @@ JARGON REWRITES:
 
 WORD DIVERSITY: No qualifier reused >2 times. "territory" ≤2, "comfortably" ≤2, "steadily" ≤1, "momentum" ≤1. Rotate synonyms for same-tier metrics.
 
+ZERO-VALUE METRICS: When a metric's value is 0 (e.g. EMI burden is 0%, investment rate is 0%, insurance cover is ₹0), do NOT write "0%" or "₹0" in the output. Instead, describe the situation in plain language — "no active loan repayments," "no investments yet," "no insurance cover in place." This keeps the tone natural and avoids highlighting a zero that can feel stark or discouraging.
+
 BANNED PHRASES (any = FAILED response):
  "asset sales"/"selling assets"/"liquidating assets" | "financial hardship" | "leaves your dependents highly exposed"
  "out-of-pocket expenses" | "income earning capacity is lost"
@@ -47,6 +49,8 @@ BANNED SCARE LANGUAGE (any = FAILED response):
  "financial ruin/crisis/disaster" | "bankruptcy"/"insolvency" | "wipe out savings"/"erode wealth"
  "leave you exposed/vulnerable/at risk" | "catastrophic"/"devastating"/"crippling"
  Instead use: "room to improve," "could use attention," "worth reviewing."
+
+Always use Indian English language.
 
 METRIC SUMMARIES (20–25 words each):
 - One key takeaway per metric. MAY include ONE user-friendly number. First clause = about that metric.

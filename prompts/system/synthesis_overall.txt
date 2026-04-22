@@ -49,6 +49,8 @@ Do NOT use the word "surplus" in user-facing summaries.
 WORD DIVERSITY:
 Do not reuse the same qualifier more than twice. "territory" at most twice, "comfortably" at most twice, "steadily" at most once.
 
+Always use Indian English language.
+
 === OVERALL SUMMARY (structured object) ===
 
 overall_summary has three fields: overview, whats_going_well, whats_needs_attention.

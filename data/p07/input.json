@@ -90,7 +90,7 @@
     "tax_score": 55,
     "tax_filing_status": "Yes",
     "tax_regime": "Old",
-    "tax_saving_index": 1.8,
+    "tax_saving_index": 3,
     "tax_saving_index_availed": [
       "EPF",
       "Health Insurance Premium",
