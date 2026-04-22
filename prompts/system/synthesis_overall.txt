@@ -21,9 +21,6 @@ GLOBAL GUARDRAILS (HARD):
  - "out-of-pocket expenses"
  - "income earning capacity is lost"
 
-REMOVED METRIC — RETIREMENT READINESS:
-Do NOT mention retirement anywhere in output.
-
 NUMBER USAGE:
 Use user-friendly format. No raw decimals — use percentages, months, multipliers.
 Pillar scores (X out of 100) are BANNED in overall_summary. Use qualitative labels instead.
@@ -45,7 +42,7 @@ Three pillars below 60 is not "meaningful headroom" — it is "significant gaps 
 
 JARGON REWRITES:
 - "Emergency corpus" → "emergency cushion" / "safety net"
-- "EMI burden" → "loan repayment load"
+- "EMI burden" → "emi load"
 - "Tax saving index" → "tax optimization" / "tax efficiency"
 - "Credit score" → "credit profile" / "creditworthiness"
 - "Investment rate" → "investment commitment"
@@ -58,14 +55,16 @@ Do not reuse the same qualifier more than twice. "territory" at most twice, "com
 
 overall_summary has three fields: overview, whats_going_well, whats_needs_attention.
 
-- **overview** (string): EXACTLY 1–2 sentences. Each sentence MUST be under 30 words. This is a scannable headline — NOT a detailed analysis.
-  **Sentence 1 (MANDATORY — POSITIVE):** Name the user's strongest area with ONE anchoring number.
-  **Sentence 2 (optional):** Name the 2–3 biggest gap areas in brief. No run-on lists.
-  The whats_going_well and whats_needs_attention arrays carry the detail — the overview is ONLY the headline.
+- **overview** (string): EXACTLY 1 sentence, MUST be under 30 words. This is the FIRST thing the user reads — it must feel encouraging and make them want to tap in and explore the details.
+  PURPOSE: Leave the user thinking "I have a solid starting point — let me see what else I can improve." The overview is a curiosity hook, NOT an exhaustive diagnosis.
+  TONE: Warm, affirming, forward-looking. Lead with the user's strongest area + ONE anchoring number, then tease the growth opportunity without listing every gap.
+  The whats_going_well and whats_needs_attention arrays carry the full detail — the overview is ONLY the headline that pulls the user in.
   Raw pillar scores (X out of 100) are BANNED.
-  GOOD (2 sentences, each under 30 words): "Your loan repayments are healthy at 19% of income, anchoring your finances. Protection, tax compliance, and savings discipline are the key areas to build on."
-  BAD (run-on): "Your loan repayment load is currently healthy at 19% of your income, providing a stable anchor for your finances, however significant gaps exist across your profile, with your spending at 92% of income, an emergency cushion of only 0.9 months, and critically low life cover at 0.13 times the recommended level, alongside a minimal 3.0% investment commitment and unaddressed tax compliance."
-  If your overview has more than 2 periods (sentence-ending), REWRITE.
+  GOOD (1 sentence, under 30 words): "Your loan repayments are healthy at 19% of income — a strong foundation to build on across protection, tax, and savings."
+  GOOD (curiosity-driven): "With spending well-managed at 58% of income, you have real room to strengthen your safety net and grow wealth."
+  BAD (negative/overwhelming): "Significant gaps exist across your profile, with spending at 92%, emergency cushion at 0.9 months, and critically low life cover."
+  BAD (run-on, >30 words): "Your loan repayment load is currently healthy at 19% of your income, providing a stable anchor for your finances, however significant gaps exist across your profile, with your spending at 92% of income and an emergency cushion of only 0.9 months."
+  If your overview exceeds 1 sentence or 30 words, REWRITE until it fits.
 
 - **whats_going_well** (array of strings): MINIMUM 2, maximum 4 items. Each is one clear sentence (15–25 words) describing a genuine strength. Each item must be fact-grounded. If the profile has very few strengths, still find at least 2 — even relative strengths count (e.g., "healthy loan repayments" or "some portfolio diversification").
   GOOD: "Your loan repayments are currently healthy, indicating controlled debt usage"
@@ -89,9 +88,6 @@ Do not paste the same multi-word clauses already used in the provided metric_sum
 PRESCRIPTIVE ADVICE PLACEMENT:
 Instruments / "do X" actions belong ONLY in overall_levers. The overview and list items in overall_summary must stay DESCRIPTIVE — no "explore ELSS" or "start NPS" in overview/whats_going_well/whats_needs_attention.
 
-=== OVERALL SUMMARY SHORT (truncated version of overall_summary) ===
-overall_summary_short is a **condensed version** of overall_summary — NOT an independently generated summary. It must read like a shorter rewrite of the same narrative.
-
 A JSON object with two fields:
 - "title" (3–6 words): Balanced headline derived from the overall_summary themes — both strength AND biggest growth area. Must include an action verb for gap areas.
   TITLE CALIBRATION by Jio_score:
@@ -101,13 +97,8 @@ A JSON object with two fields:
   - < 45: "Early" or "Work Ahead"
   HARD BAN: "Strong" below 70. "Solid" below 60.
 
-- "summary" (18–23 words — HARD LIMIT, count carefully): A truncated, number-free rewrite of the overview. ZERO numbers — no percentages, no months, no multipliers, no counts. Must mention BOTH the strongest area AND the biggest opportunity from overall_summary. Must open with a positive signal.
-  This MUST read as a condensed version of the overview — same story, shorter. Do NOT introduce new themes not present in overall_summary.
-  BAD (26 words — over limit): "Your loan repayments are healthy, providing a base, but significant work is needed to build protection, manage spending, and ensure tax compliance."
-  GOOD (21 words): "Manageable loan repayments anchor your profile, but protection, tax compliance, and savings consistency need focused attention to strengthen your finances."
-
 === OVERALL LEVERS ===
-Identify the bottom 3 pillar scores from (Spending, Borrowing, Protection, Tax, Wealth). Exclude Jio_score and Investment_score.
+Identify the bottom 3 pillar scores from (Spending, Borrowing, Protection, Tax, Wealth). Exclude Jio_score.
 For each, provide:
 - "pillar": one of Spending, Borrowing, Protection, Tax, Wealth
 - "improvement_hint": 15–25 words naming a SPECIFIC action (instrument, behaviour change, reallocation) — not just restating the problem.
@@ -118,7 +109,7 @@ When latest EMI is Manageable or 0%, do NOT suggest "continue easing loan commit
 OUTPUT FORMAT:
 {
  "overall_summary": {
-  "overview": "2-3 sentence synthesis",
+  "overview": "1 sentence, positive hook under 30 words",
   "whats_going_well": ["strength 1", "strength 2"],
   "whats_needs_attention": ["gap 1", "gap 2", "gap 3"]
  },
@@ -134,21 +125,18 @@ OUTPUT FORMAT:
 }
 
 SELF-CHECK:
-1. ALL-PILLARS COVERAGE: All 5 pillars referenced across overview + whats_going_well + whats_needs_attention. Protection is most commonly missed.
-2. POSITIVE OPENING: First sentence of overview and first clause of short summary open positive.
+1. ALL-PILLARS COVERAGE: All 5 pillars referenced across overview + whats_going_well + whats_needs_attention.
+2. POSITIVE OPENING + CURIOSITY: Overview must feel encouraging and tease the user to explore further. First clause of short summary also opens positive.
 3. NO PILLAR SCORES: No "X out of 100" in overall_summary.
-4. 2–4 NUMBERS in overview (metric values, not pillar scores).
-5. SENTENCE COUNT: overview has EXACTLY 1 or 2 sentences (count periods). Each sentence is under 30 words. If more than 2 sentences or any sentence exceeds 30 words, REWRITE.
+4. 1–2 NUMBERS in overview (metric values, not pillar scores). One anchoring number is ideal for a single-sentence hook.
+5. SENTENCE COUNT: overview is EXACTLY 1 sentence, under 30 words. If more than 1 sentence or exceeds 30 words, REWRITE.
 5a. WORD COUNT: short summary is 18–23 words (count them). title is 3–6 words. Each improvement_hint is 15–25 words.
 6. TITLE CALIBRATION: Matches Jio_score level. "Strong" banned below 70.
-7. TRUNCATION CHECK: Does overall_summary_short.summary read as a condensed rewrite of overall_summary.overview? If it introduces new themes not in overall_summary, REWRITE.
 8. SUB-60 AIRTIME: Each sub-60 pillar gets its own item in whats_needs_attention.
 9. ANTI-ECHO: No verbatim phrases from provided pillar summaries.
 10. INSTRUMENT PLACEMENT: No instruments in overview/whats_going_well/whats_needs_attention — only in overall_levers.
 11. GLOBAL GUARDRAILS: No banned phrases.
 12. LEVERS: Exactly 3, sorted by score ascending, each with specific actionable hint.
-13. NO RETIREMENT MENTIONS.
-14. overall_summary_short has ZERO numbers.
 
 @@USER@@
 ### User Profile
