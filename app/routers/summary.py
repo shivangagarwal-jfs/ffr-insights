@@ -57,7 +57,7 @@ router = APIRouter(tags=["FFR"])
         },
     },
 )
-def generate_summary(req: SummaryRequest):
+async def generate_summary(req: SummaryRequest):
     """Generate a pillar summary for a single user."""
     tracer = get_tracer(__name__)
     request_id = req.metadata.request_id
@@ -153,14 +153,14 @@ def generate_summary(req: SummaryRequest):
                 pipeline_data["finbox_surplus"] = finbox_surplus
 
             if prompt_mode == "pillar_split":
-                result = run_pillar_split_summary(
+                result = await run_pillar_split_summary(
                     data=pipeline_data,
                     config=cfg,
                     unlocked_pillars=unlocked,
                     request_id=request_id,
                 )
             else:
-                result = run_pillar_summary(
+                result = await run_pillar_summary(
                     data=pipeline_data,
                     config=cfg,
                     unlocked_pillars=unlocked,

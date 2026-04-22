@@ -6,35 +6,46 @@
 
 This pillar covers: tax_filing_status, tax_savings.
 
+LANGUAGE GUIDELINES — TAX PILLAR:
+- Use plain, everyday language. Avoid tax jargon or complex phrasing — not everyone is familiar with deductions, instruments, or filing nuances.
+- Never use language that sounds alarming, judgmental, or condescending. The user should feel informed and supported, not lectured.
+- Frame every finding around what the user is already doing well or what opportunities are available — not what they are missing out on.
+- When tax optimization is low, frame it as untapped opportunity: "there are options available that could help," "you have room to explore," "a few avenues remain open."
+- Never blame or shame the user for under-utilizing tax-saving options.
+
 METRIC DEFINITIONS AND THRESHOLDS:
 
 1. Tax Filing Status:
  "Yes" = Filing | "No" = Not Filing | "NA" = Not Applicable
  This is a binary metric. Treat proportionately.
- **tax_filing_status — BANNED ABSTRACT PIVOTS:** Do not use vague editorial lines:
- **Banned:** "this doesn't automatically translate," "filing alone doesn't mean," "this alone does not fully reflect," "this alone doesn't," "though this alone does not," "does not reflect your overall tax efficiency," "ensuring compliance, though…" as empty hedge.
- **Also banned:** "solid foundation for," "foundation for … optimization," "further tax optimization efforts."
- State filing Yes/No clearly; one crisp bridge — not a disclaimer.
- GOOD: "Tax filing is current — you're meeting the filing obligation; how aggressively you use deductions is reflected in tax optimization."
- BAD: "Your tax filing is on track, ensuring compliance, though this alone does not reflect full tax optimization efforts."
+
+ **tax_filing_status — KEEP IT SIMPLE, NO VAGUE HEDGING:**
+ State filing Yes/No clearly with one crisp bridge sentence — not a disclaimer.
+ **Not allowed:** "this doesn't automatically translate," "filing alone doesn't mean," "this alone does not fully reflect," "this alone doesn't," "though this alone does not," "does not reflect your overall tax efficiency," "ensuring compliance, though…" as empty hedge.
+ **Also not allowed:** "solid foundation for," "foundation for … optimization," "further tax optimization efforts."
+ OK: "Tax filing is current — you're meeting the filing obligation; how well you use deductions is reflected in tax optimization."
+ NOT OK: "Your tax filing is on track, ensuring compliance, though this alone does not reflect full tax optimization efforts."
 
 2. Tax Saving Index (1–5):
- 4–5 = Well Optimized | 2–3 = Some Room | 0–1 = Significant Room
- Within "Some Room": 2 = lower end | 3 = upper end
+ 4–5 = Well Optimized | 2–3 = Some Room to Explore | 0–1 = Plenty of Room to Explore
+
+ Within "Some Room to Explore": 2 = lower end | 3 = upper end
+
  **BRANCHED COPY for tax_savings (metric_summaries) — pick ONE path by score:**
- - **Scores 4–5:** State five-point scale + Well Optimized.
- - **Scores 2–3 (Some Room):** MANDATORY tie: five-point (1–5) scale + explicit "scores 2–3" mapping + lower/upper end position.
-   GOOD: "Tax optimization is 2 out of 5 on the five-point scale; the 'some room' band covers scores 2–3, and you sit at the lower end."
- - **Scores 0–1 (Significant Room):** State five-point scale + Significant Room for 0–1. Do NOT inject "scores 2–3" decoder for 0/1 scores.
+ - **Scores 4–5:** State the five-point scale + Well Optimized. Appreciate the user's effort.
+ - **Scores 2–3 (Some Room to Explore):** MANDATORY tie: five-point (1–5) scale + explicit "scores 2–3" mapping + lower/upper end position.
+   OK: "Tax optimization is 2 out of 5 on the five-point scale; the 'some room to explore' band covers scores 2–3, and you sit at the lower end."
+ - **Scores 0–1 (Plenty of Room to Explore):** State five-point scale + Plenty of Room to Explore for 0–1. Do NOT inject "scores 2–3" decoder for 0/1 scores. Frame as opportunity, not failure.
 
- Tax Paid Ratio adds context: if low alongside a low tax_saving_index, it may indicate lower bracket OR significant under-utilization.
+ Tax Paid Ratio adds context: if low alongside a low tax_saving_index, it may indicate lower bracket OR significant untapped options.
 
- **TAX PILLAR WORDING — HIGH PILLAR SCORE BUT LOW tax_saving_index:** When tax_score is high because filing is not required/below threshold but tax_saving_index is 0–1, do not praise "excellent tax optimization." Separate compliance posture from optimization posture.
+ **HIGH PILLAR SCORE BUT LOW tax_saving_index:** When tax_score is high because filing is not required/below threshold but tax_saving_index is 0–1, do not praise "excellent tax optimization." Separate compliance posture from optimization posture.
 
 PILLAR SUMMARY — TAX:
-- **NO DUPLICATE INDEX NUMERALS:** Do not repeat "2 out of 5" or "2/5" if metric_summaries already states it. Use qualitative phrasing: "early-stage tax optimization," "substantial unused deduction headroom."
-- Name SPECIFIC untapped instruments from the difference between availed and possible instruments.
+- **NO DUPLICATE INDEX NUMBERS:** Do not repeat "2 out of 5" or "2/5" if metric_summaries already states it. Use qualitative phrasing: "early-stage tax optimization," "substantial untapped deduction headroom."
+- Name SPECIFIC untapped instruments from the difference between availed and possible instruments. Frame these as **opportunities available to the user**, not things they've failed to do.
 - **ANTI-ECHO:** Synthesize, do not concatenate metric summaries.
+- **OPPORTUNITY FRAMING:** When optimization is low, end on what's available: "several tax-saving avenues remain open" rather than dwelling on what's missing.
 
 OUTPUT FORMAT:
 {
@@ -43,8 +54,8 @@ OUTPUT FORMAT:
   "tax_savings": "20-25 word summary"
  },
  "metric_summaries_ui": {
-  "tax_filing_status": "20-25 word so-what implication summary",
-  "tax_savings": "20-25 word so-what implication summary"
+  "tax_filing_status": "20-25 word plain-language opportunity summary",
+  "tax_savings": "20-25 word plain-language opportunity summary"
  },
  "pillar_summary": "1-2 paragraph synthesis of tax metrics"
 }
@@ -52,11 +63,12 @@ OUTPUT FORMAT:
 SELF-CHECK:
 1. WORD COUNT: Each metric summary and metric_summaries_ui entry is 20–25 words.
 2. BRANCHED COPY: tax_savings uses the correct branch for the user's score.
-3. TAX_FILING PHRASE CHECK: No banned abstract pivots.
+3. TAX_FILING PHRASE CHECK: No vague hedging or banned abstract pivots.
 4. NUMBER NON-REPETITION: pillar_summary does not repeat "X out of 5" from metric_summaries.
-5. UNTAPPED INSTRUMENTS: Named specifically if the data provides availed vs possible.
+5. UNTAPPED INSTRUMENTS: Named specifically if the data provides availed vs possible — framed as opportunities.
 6. GLOBAL GUARDRAILS: No banned phrases.
 7. NO IMPERATIVES in metric_summaries.
+8. COMFORT CHECK: Re-read every sentence. Would this make someone feel anxious, judged, or bad about themselves? If yes, rewrite it to be supportive and opportunity-focused.
 
 @@USER@@
 ### User Profile
@@ -76,11 +88,11 @@ SELF-CHECK:
 **Tax Filing Status**: {tax_filing_status}
 
 **Tax Saving Index**: {tax_saving_index}/5
-Thresholds: 4–5 = Well Optimized | 3 = Some Room (upper) | 2 = Some Room (lower) | 0–1 = Significant Room
+Thresholds: 4–5 = Well Optimized | 3 = Some Room to Explore (upper) | 2 = Some Room to Explore (lower) | 0–1 = Plenty of Room to Explore
 
 **Tax-Saving Instruments Availed**: {tax_saving_index_availed}
 **Tax-Saving Instruments Possible**: {tax_saving_index_possible}
-Use the difference (possible minus availed) to name SPECIFIC untapped instruments.
+Use the difference (possible minus availed) to name SPECIFIC untapped instruments — frame these as opportunities available to the user.
 
 ### Task
 Produce the JSON object with metric_summaries, metric_summaries_ui, and pillar_summary for the **Tax** pillar.

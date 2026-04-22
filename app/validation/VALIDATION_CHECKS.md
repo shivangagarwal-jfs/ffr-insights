@@ -55,10 +55,6 @@ All checks below are executed inside `validate_pillar_summary()` and apply **onl
 | Check | ID | Severity | Max Words | Description |
 |-------|----|----------|-----------|-------------|
 | Metric summary length | `word_count.metric_summaries.<key>` | error | 25 | Each metric summary must not exceed 25 words. |
-| Short title length | `word_count.overall_summary_short.title` | error | 6 | The `overall_summary_short.title` must not exceed 6 words. |
-| Short summary length | `word_count.overall_summary_short.summary` | error | 23 | The `overall_summary_short.summary` must not exceed 23 words. |
-| Short summary structure | `word_count.overall_summary_short` | error | — | `overall_summary_short` must be an object with `title` and `summary` when present. |
-| Lever hint length | `word_count.overall_levers[i]` | error | 25 | Each `overall_levers[].improvement_hint` must not exceed 25 words. |
 
 ### 3.3 Per-Metric Grounding (metric_summaries)
 

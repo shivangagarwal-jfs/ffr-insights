@@ -9,11 +9,8 @@ from typing import Any, List, Mapping
 from app.validation.post_llm import (
     DIR_RATIO_FLAT_ABS,
     DIR_SCORE_FLAT_ABS,
-    LEVER_HINT_MAX_WORDS,
     METRIC_SUMMARY_MAX_WORDS,
     RUPEE_REQUEST_POOL_DESC,
-    SHORT_SUMMARY_MAX_WORDS,
-    SHORT_TITLE_MAX_WORDS,
     ValidationIssue,
     _collect_allowed_rupees_from_request,
     _concat_output_text,
@@ -88,21 +85,8 @@ def _word_count_limits_audit_detail(resp_data: Mapping[str, Any]) -> str:
             text = str(ms.get(key) or "").strip()
             n = word_count(text)
             lines.append(f"  \u2022 data.metric_summaries['{key}']: {n} words (allowed 0\u2013{METRIC_SUMMARY_MAX_WORDS})")
-    short = resp_data.get("overall_summary_short")
-    if isinstance(short, Mapping):
-        title = str(short.get("title") or "").strip()
-        summ = str(short.get("summary") or "").strip()
-        lines.append(f"  \u2022 data.overall_summary_short.title: {word_count(title)} words (allowed 0\u2013{SHORT_TITLE_MAX_WORDS})")
-        lines.append(f"  \u2022 data.overall_summary_short.summary: {word_count(summ)} words (allowed 0\u2013{SHORT_SUMMARY_MAX_WORDS})")
-    levers = resp_data.get("overall_levers")
-    if isinstance(levers, list):
-        for i, lv in enumerate(levers):
-            if not isinstance(lv, Mapping):
-                continue
-            hint = str(lv.get("improvement_hint") or "").strip()
-            lines.append(f"  \u2022 data.overall_levers[{i}].improvement_hint: {word_count(hint)} words (allowed 0\u2013{LEVER_HINT_MAX_WORDS})")
     if not lines:
-        return "No metric_summaries / overall_summary_short / overall_levers under response.data."
+        return "No metric_summaries under response.data."
     return "\n".join(lines)
 
 

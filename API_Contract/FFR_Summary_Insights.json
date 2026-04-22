@@ -1,0 +1,4863 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FFR API — Financial Fitness Report",
+    "description": "Gemini-powered API that analyses structured financial data and scores across five pillars (spending, borrowing, protection, tax, wealth) to produce:\n\n* **Pillar summaries** — per-metric prose and a holistic overview with strengths and areas needing attention.\n* **Insight cards** — actionable, themed insight cards grouped by pillar with an optional cross-pillar top insight.\n\nBoth endpoints accept the same `FfrScreenData` payload and return structured JSON envelopes with consistent error shapes.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/ffr_summary": {
+      "post": {
+        "tags": [
+          "FFR"
+        ],
+        "summary": "Generate pillar summaries",
+        "description": "Produces per-metric prose summaries and a holistic overall summary (strengths + areas needing attention) from structured financial data and pillar scores. `metadata.type` selects which pillars are in scope.",
+        "operationId": "generate_summary_v1_ffr_summary_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error — missing pillar data, invalid metadata types, or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error — LLM failure or response assembly error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service misconfigured — missing Gemini API key or base URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ffr_insight": {
+      "post": {
+        "tags": [
+          "FFR"
+        ],
+        "summary": "Generate pillar insight cards",
+        "description": "Produces LLM-generated insight cards grouped by financial pillar (spending, borrowing, protection, tax, wealth) plus an optional cross-pillar top insight. `metadata.type` selects which pillars are in scope.",
+        "operationId": "generate_insight_v1_ffr_insight_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InsightInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightOutputResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error — missing pillar data, invalid metadata types, or malformed request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightOutputResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error — insight generation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightOutputResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BankAccountProfile": {
+        "properties": {
+          "acc_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acc No",
+            "description": "Account identifier string."
+          },
+          "bank_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Name",
+            "description": "Bank name."
+          },
+          "latest_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Balance",
+            "description": "Latest available balance (INR)."
+          },
+          "cnt_credits_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Credits C30",
+            "description": "Credit transaction count in last 30 days."
+          },
+          "amt_credits_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credits C30",
+            "description": "Total credit amount in last 30 days (INR)."
+          },
+          "cnt_debits_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Debits C30",
+            "description": "Debit transaction count in last 30 days."
+          },
+          "amt_debits_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debits C30",
+            "description": "Total debit amount in last 30 days (INR)."
+          },
+          "avg_balance_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Balance C30",
+            "description": "Average balance over last 30 days (INR)."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "BankAccountProfile",
+        "description": "Single bank account entry inside ``all_account_profile``."
+      },
+      "BillAccount": {
+        "properties": {
+          "bill_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Provider",
+            "description": "Provider name, e.g. `\"jio\"`, `\"maharashtra electricity\"`."
+          },
+          "bill_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Category",
+            "description": "Category, e.g. `\"phone\"`, `\"electricity\"`."
+          },
+          "bill_acc_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Acc Number",
+            "description": "Account identifier."
+          },
+          "billing_plan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Plan",
+            "description": "Billing plan, e.g. `\"prepaid\"`, `\"postpaid\"`."
+          },
+          "bill_detail_m1": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BillDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Most recent month billing detail."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "BillAccount",
+        "description": "One bill account entry inside ``bill_profile``."
+      },
+      "BillDetail": {
+        "properties": {
+          "bill_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Amount",
+            "description": "Bill amount for the period."
+          },
+          "bill_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Status",
+            "description": "Status string, e.g. `\"bill_paid\"`."
+          },
+          "bill_paid_amt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Paid Amt",
+            "description": "Amount actually paid."
+          },
+          "bill_status_inbox_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Status Inbox Date",
+            "description": "Date the bill status was received (YYYY-MM-DD)."
+          },
+          "bill_due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Due Date",
+            "description": "Payment due date (YYYY-MM-DD), null for prepaid."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "BillDetail",
+        "description": "Single billing period detail for a bill account."
+      },
+      "CTAObject": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Button / link label shown to the user."
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Action identifier consumed by the client app for navigation."
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "action"
+        ],
+        "title": "CTAObject",
+        "description": "Call-to-action with display text and a navigation action identifier.",
+        "examples": [
+          {
+            "action": "jio://cashflow/view",
+            "text": "View Details"
+          }
+        ]
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Machine-readable error code, e.g. `VALIDATION_ERROR`, `LLM_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error summary."
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Details",
+            "description": "Per-field validation failure details (empty on non-validation errors)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "description": "Error envelope returned when summary generation fails."
+      },
+      "ErrorDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Dot-path of the field that failed validation."
+          },
+          "issue": {
+            "type": "string",
+            "title": "Issue",
+            "description": "Human-readable description of the validation issue."
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "issue"
+        ],
+        "title": "ErrorDetail",
+        "description": "Alias kept for backwards compatibility with summary error paths."
+      },
+      "FfrRequestMetadata": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id",
+            "description": "Unique customer identifier."
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "Correlation / idempotency key."
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO-8601 request timestamp."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Client API version string."
+          },
+          "type": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Type",
+            "description": "Pillar(s) to generate. Each element must be one of: \"spending\", \"borrowing\", \"protection\", \"tax\", \"wealth\"."
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "request_id",
+          "timestamp",
+          "version"
+        ],
+        "title": "FfrRequestMetadata",
+        "description": "Common request envelope carrying correlation identifiers and the list of\nfinancial pillars the client is requesting.",
+        "examples": [
+          {
+            "customer_id": "cust_abc123",
+            "request_id": "req_7f3a",
+            "timestamp": "2025-06-15T10:30:00Z",
+            "type": [
+              "spending",
+              "borrowing"
+            ],
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "FfrScreenData": {
+        "properties": {
+          "customer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Id"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age",
+            "description": "User age in years; used with city/profession/income/family_size for the on-the-fly Persona paragraph."
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City",
+            "description": "City name; tier (Tier-1 vs Tier-2) is derived server-side for persona selection."
+          },
+          "profession_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profession Type",
+            "description": "Profession category string (e.g. salaried, gig, founder); used in the Persona paragraph."
+          },
+          "annual_income": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Income",
+            "description": "Gross annual income in INR; if omitted, may be inferred from monthly_income for the Persona paragraph."
+          },
+          "family_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Size",
+            "description": "Household size including the user; dependents are computed as max(0, family_size - 1) for the Persona paragraph."
+          },
+          "jio_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jio Score",
+            "description": "Composite financial fitness score (0–100).",
+            "default": 0
+          },
+          "spending_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spending Score",
+            "description": "Spending pillar score (0–100).",
+            "default": 0
+          },
+          "monthly_income": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Income",
+            "description": "Monthly income time-series."
+          },
+          "monthly_spend": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Spend",
+            "description": "Monthly spend time-series."
+          },
+          "avg_monthly_spends": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Spends",
+            "description": "Average monthly spend (INR)."
+          },
+          "spend_to_income_ratio": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Spend To Income Ratio",
+            "description": "Monthly spend-to-income ratio time-series."
+          },
+          "saving_consistency": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Saving Consistency",
+            "description": "Monthly savings consistency time-series (also accepts `savings_consistency`)."
+          },
+          "monthly_cash_inflow": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Cash Inflow",
+            "description": "Monthly cash inflow time-series."
+          },
+          "monthly_cash_outflow": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Cash Outflow",
+            "description": "Monthly cash outflow time-series."
+          },
+          "emergency_corpus": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Corpus",
+            "description": "Current emergency corpus amount (INR).",
+            "default": 0
+          },
+          "ideal_emergency_corpus": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Emergency Corpus",
+            "description": "Recommended emergency corpus amount (INR).",
+            "default": 0
+          },
+          "borrowing_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Borrowing Score",
+            "description": "Borrowing pillar score (0–100).",
+            "default": 0
+          },
+          "emi_burden": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Emi Burden",
+            "description": "Monthly EMI-to-income burden ratio time-series."
+          },
+          "monthly_emi": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Emi",
+            "description": "Monthly EMI amount time-series."
+          },
+          "credit_score": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Credit Score",
+            "description": "Credit score time-series."
+          },
+          "protection_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protection Score",
+            "description": "Protection pillar score (0–100).",
+            "default": 0
+          },
+          "life_cover_adequacy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Cover Adequacy",
+            "description": "Life cover adequacy ratio (current / ideal).",
+            "default": 0
+          },
+          "current_life_cover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Life Cover",
+            "description": "Current life insurance cover (INR).",
+            "default": 0
+          },
+          "ideal_life_cover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Life Cover",
+            "description": "Recommended life insurance cover (INR).",
+            "default": 0
+          },
+          "health_cover_adequacy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Cover Adequacy",
+            "description": "Health cover adequacy ratio (current / ideal).",
+            "default": 0
+          },
+          "current_health_cover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Health Cover",
+            "description": "Current health insurance cover (INR).",
+            "default": 0
+          },
+          "ideal_health_cover": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ideal Health Cover",
+            "description": "Recommended health insurance cover (INR).",
+            "default": 0
+          },
+          "tax_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Score",
+            "description": "Tax pillar score (0–100).",
+            "default": 0
+          },
+          "tax_filing_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Filing Status",
+            "description": "Tax filing status, e.g. `\"filed\"`, `\"not_filed\"`.",
+            "default": ""
+          },
+          "tax_regime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Regime",
+            "description": "Tax regime, e.g. `\"old\"`, `\"new\"`.",
+            "default": ""
+          },
+          "tax_saving_index": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Saving Index",
+            "description": "Tax saving utilisation index (0–100).",
+            "default": 0
+          },
+          "tax_saving_index_availed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tax Saving Index Availed",
+            "description": "Tax saving instruments already availed."
+          },
+          "tax_saving_index_possible": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tax Saving Index Possible",
+            "description": "Tax saving instruments available but not yet availed."
+          },
+          "wealth_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wealth Score",
+            "description": "Wealth pillar score (0–100).",
+            "default": 0
+          },
+          "monthly_investment": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Monthly Investment",
+            "description": "Monthly investment amount time-series."
+          },
+          "investment_rate": {
+            "items": {
+              "$ref": "#/components/schemas/MonthValue"
+            },
+            "type": "array",
+            "title": "Investment Rate",
+            "description": "Monthly investment rate time-series."
+          },
+          "portfolio_diversification": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioSlice"
+            },
+            "type": "array",
+            "title": "Portfolio Diversification",
+            "description": "Portfolio diversification breakdown."
+          },
+          "portfolio_overlap": {
+            "items": {},
+            "type": "array",
+            "title": "Portfolio Overlap",
+            "description": "Portfolio overlap data."
+          },
+          "rule_based_insights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleBasedInsights"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pre-computed rule-based insight cards per pillar."
+          },
+          "metric_level_scores": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Metric Level Scores",
+            "description": "Pass-through metric-level scores for the response."
+          }
+        },
+        "type": "object",
+        "title": "FfrScreenData",
+        "description": "Financial payload under ``data``.  Most fields are optional so\nsingle-pillar requests can omit unused sections; provided fields are\ntype-checked.  Nullable scalars accept ``null`` from clients that have\nno data for a given pillar (common in insight requests)."
+      },
+      "FinboxFeatures": {
+        "properties": {
+          "category_spending_profile": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Category Spending Profile",
+            "description": "Map of spending category to average monthly amount (INR). Null values indicate categories with no data."
+          },
+          "is_income_stable": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Income Stable",
+            "description": "Finbox income-stability flag (1 = stable, 0 = unstable)."
+          },
+          "surplus": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surplus",
+            "description": "Finbox-computed monthly surplus (income minus expenses) in INR."
+          }
+        },
+        "type": "object",
+        "title": "FinboxFeatures",
+        "description": "Finbox-derived features nested under ``features.finbox``."
+      },
+      "InsightErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Machine-readable error code, e.g. `VALIDATION_ERROR`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error summary."
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationDetail"
+            },
+            "type": "array",
+            "title": "Details",
+            "description": "Per-field validation failure details (empty on non-validation errors)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "InsightErrorBody",
+        "description": "Error envelope returned when insight generation fails."
+      },
+      "InsightFinboxFeatures": {
+        "properties": {
+          "category_spending_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Spending Profile",
+            "description": "Per-category monthly spend breakdown. Keys follow the pattern `total_{essential|discretionary}_spends_{category}_m{0-6}`."
+          },
+          "expense_profile_merchants": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expense Profile Merchants",
+            "description": "Merchant-level transaction counts, amounts, and percentages (e.g. `cnt_txns_zomato_v3_c30`, `amt_txns_amazon_v3_c30`)."
+          },
+          "bill_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/BillAccount"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bill Profile",
+            "description": "Bill account profiles keyed by `bill_acc1`, `bill_acc2`, etc."
+          },
+          "all_account_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/BankAccountProfile"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Account Profile",
+            "description": "Bank account profiles keyed by `acc0`, `acc1`, etc."
+          },
+          "loan_profile": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/LoanAccount"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Profile",
+            "description": "Loan account profiles keyed by `loan_acc1`, `loan_acc2`, etc."
+          },
+          "total_essential_spend_m0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M0",
+            "description": "Total essential spend, current month."
+          },
+          "total_essential_spend_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M1",
+            "description": "Total essential spend, month-1."
+          },
+          "total_essential_spend_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M2",
+            "description": "Total essential spend, month-2."
+          },
+          "total_essential_spend_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M3",
+            "description": "Total essential spend, month-3."
+          },
+          "total_essential_spend_m4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M4",
+            "description": "Total essential spend, month-4."
+          },
+          "total_essential_spend_m5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M5",
+            "description": "Total essential spend, month-5."
+          },
+          "total_essential_spend_m6": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Essential Spend M6",
+            "description": "Total essential spend, month-6."
+          },
+          "total_discretionary_spend_m0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M0",
+            "description": "Total discretionary spend, current month."
+          },
+          "total_discretionary_spend_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M1",
+            "description": "Total discretionary spend, month-1."
+          },
+          "total_discretionary_spend_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M2",
+            "description": "Total discretionary spend, month-2."
+          },
+          "total_discretionary_spend_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M3",
+            "description": "Total discretionary spend, month-3."
+          },
+          "total_discretionary_spend_m4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M4",
+            "description": "Total discretionary spend, month-4."
+          },
+          "total_discretionary_spend_m5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M5",
+            "description": "Total discretionary spend, month-5."
+          },
+          "total_discretionary_spend_m6": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Discretionary Spend M6",
+            "description": "Total discretionary spend, month-6."
+          },
+          "amt_debit_txn_m0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M0",
+            "description": "Total debit transaction amount, current month."
+          },
+          "amt_debit_txn_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M1",
+            "description": "Total debit transaction amount, month-1."
+          },
+          "amt_debit_txn_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M2",
+            "description": "Total debit transaction amount, month-2."
+          },
+          "amt_debit_txn_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M3",
+            "description": "Total debit transaction amount, month-3."
+          },
+          "amt_debit_txn_m4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M4",
+            "description": "Total debit transaction amount, month-4."
+          },
+          "amt_debit_txn_m5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M5",
+            "description": "Total debit transaction amount, month-5."
+          },
+          "amt_debit_txn_m6": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Txn M6",
+            "description": "Total debit transaction amount, month-6."
+          },
+          "amt_debit_wo_transf_m0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M0",
+            "description": "Debit amount excluding transfers, current month."
+          },
+          "amt_debit_wo_transf_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M1",
+            "description": "Debit amount excluding transfers, month-1."
+          },
+          "amt_debit_wo_transf_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M2",
+            "description": "Debit amount excluding transfers, month-2."
+          },
+          "amt_debit_wo_transf_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M3",
+            "description": "Debit amount excluding transfers, month-3."
+          },
+          "amt_debit_wo_transf_m4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M4",
+            "description": "Debit amount excluding transfers, month-4."
+          },
+          "amt_debit_wo_transf_m5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M5",
+            "description": "Debit amount excluding transfers, month-5."
+          },
+          "amt_debit_wo_transf_m6": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Debit Wo Transf M6",
+            "description": "Debit amount excluding transfers, month-6."
+          },
+          "festival_spend_pct_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Festival Spend Pct C30",
+            "description": "Festival spend percentage, last 30 days."
+          },
+          "festival_spend_pct_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Festival Spend Pct C90",
+            "description": "Festival spend percentage, last 90 days."
+          },
+          "late_night_spend_pct_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Night Spend Pct C30",
+            "description": "Late-night spend percentage, last 30 days."
+          },
+          "late_night_spend_pct_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Night Spend Pct C90",
+            "description": "Late-night spend percentage, last 90 days."
+          },
+          "post_salary_spend_pct_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Salary Spend Pct C30",
+            "description": "Post-salary spend percentage, last 30 days."
+          },
+          "post_salary_spend_pct_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Salary Spend Pct C90",
+            "description": "Post-salary spend percentage, last 90 days."
+          },
+          "pre_salary_spend_pct_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Salary Spend Pct C30",
+            "description": "Pre-salary spend percentage, last 30 days."
+          },
+          "pre_salary_spend_pct_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Salary Spend Pct C90",
+            "description": "Pre-salary spend percentage, last 90 days."
+          },
+          "weekend_spend_pct_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekend Spend Pct C30",
+            "description": "Weekend spend percentage, last 30 days."
+          },
+          "weekend_spend_pct_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekend Spend Pct C90",
+            "description": "Weekend spend percentage, last 90 days."
+          },
+          "amt_all_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt All Subscriptions C360",
+            "description": "Total subscription spend in last 360 days."
+          },
+          "cnt_all_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt All Subscriptions C360",
+            "description": "Total subscription count in last 360 days."
+          },
+          "cnt_streaming_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Streaming Subscriptions C360",
+            "description": "Streaming subscription count."
+          },
+          "cnt_music_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Music Subscriptions C360",
+            "description": "Music subscription count."
+          },
+          "cnt_food_delivery_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Food Delivery Subscriptions C360",
+            "description": "Food delivery subscription count."
+          },
+          "cnt_ecom_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Ecom Subscriptions C360",
+            "description": "E-commerce subscription count."
+          },
+          "cnt_dating_apps_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Dating Apps Subscriptions C360",
+            "description": "Dating app subscription count."
+          },
+          "cnt_merchant_tools_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Merchant Tools Subscriptions C360",
+            "description": "Merchant tools subscription count."
+          },
+          "cnt_premium_apps_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Premium Apps Subscriptions C360",
+            "description": "Premium app subscription count."
+          },
+          "cnt_productivity_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Productivity Subscriptions C360",
+            "description": "Productivity subscription count."
+          },
+          "redundant_streaming_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Streaming Subscriptions C360",
+            "description": "Redundant streaming subscription count."
+          },
+          "redundant_music_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Music Subscriptions C360",
+            "description": "Redundant music subscription count."
+          },
+          "redundant_food_delivery_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Food Delivery Subscriptions C360",
+            "description": "Redundant food delivery subscription count."
+          },
+          "redundant_ecom_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Ecom Subscriptions C360",
+            "description": "Redundant e-commerce subscription count."
+          },
+          "redundant_dating_apps_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Dating Apps Subscriptions C360",
+            "description": "Redundant dating apps subscription count."
+          },
+          "redundant_merchant_tools_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Merchant Tools Subscriptions C360",
+            "description": "Redundant merchant tools subscription count."
+          },
+          "redundant_premium_apps_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Premium Apps Subscriptions C360",
+            "description": "Redundant premium apps subscription count."
+          },
+          "redundant_productivity_subscriptions_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redundant Productivity Subscriptions C360",
+            "description": "Redundant productivity subscription count."
+          },
+          "subscription_spend_pct_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Spend Pct C360",
+            "description": "Subscription spend as a percentage of total spend."
+          },
+          "avg_monthly_amt_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Amt Debits Upi 3M",
+            "description": "Average monthly UPI debit amount over 3 months."
+          },
+          "max_amt_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amt Debits Upi 3M",
+            "description": "Max single UPI debit amount over 3 months."
+          },
+          "amt_total_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Total Debits Upi 3M",
+            "description": "Total UPI debit amount over 3 months."
+          },
+          "cnt_total_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi 3M",
+            "description": "Total UPI debit count over 3 months."
+          },
+          "cnt_total_debits_upi_gt_5k_3m": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi Gt 5K 3M",
+            "description": "UPI debits > 5k count over 3 months."
+          },
+          "cnt_total_debits_upi_lt_100_3m": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi Lt 100 3M",
+            "description": "UPI debits < 100 count over 3 months."
+          },
+          "avg_monthly_cnt_credits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Cnt Credits Upi 3M",
+            "description": "Average monthly UPI credit count over 3 months."
+          },
+          "avg_monthly_cnt_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Cnt Debits Upi 3M",
+            "description": "Average monthly UPI debit count over 3 months."
+          },
+          "ticket_size_credits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Size Credits Upi 3M",
+            "description": "Average UPI credit ticket size over 3 months."
+          },
+          "ticket_size_debits_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Size Debits Upi 3M",
+            "description": "Average UPI debit ticket size over 3 months."
+          },
+          "ticket_size_txn_upi_3m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Size Txn Upi 3M",
+            "description": "Average UPI transaction ticket size over 3 months."
+          },
+          "amt_total_debits_upi_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Total Debits Upi M1",
+            "description": "UPI debit amount, month-1."
+          },
+          "amt_total_debits_upi_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Total Debits Upi M2",
+            "description": "UPI debit amount, month-2."
+          },
+          "amt_total_debits_upi_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Total Debits Upi M3",
+            "description": "UPI debit amount, month-3."
+          },
+          "cnt_total_debits_upi_m1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi M1",
+            "description": "UPI debit count, month-1."
+          },
+          "cnt_total_debits_upi_m2": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi M2",
+            "description": "UPI debit count, month-2."
+          },
+          "cnt_total_debits_upi_m3": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Total Debits Upi M3",
+            "description": "UPI debit count, month-3."
+          },
+          "calculated_income_amount_v4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculated Income Amount V4",
+            "description": "Finbox-calculated income amount (INR)."
+          },
+          "calculated_income_profession_type_v4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculated Income Profession Type V4",
+            "description": "Profession type, e.g. `\"gig_worker\"`, `\"salaried\"`."
+          },
+          "calculated_income_confidence_v4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calculated Income Confidence V4",
+            "description": "Confidence level, e.g. `\"high\"`, `\"medium\"`, `\"low\"`."
+          },
+          "amt_credit_txn_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn C180",
+            "description": "Total credit transactions, last 180 days."
+          },
+          "amt_credit_txn_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn C30",
+            "description": "Total credit transactions, last 30 days."
+          },
+          "amt_credit_txn_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn C90",
+            "description": "Total credit transactions, last 90 days."
+          },
+          "amt_credit_txn_m0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M0",
+            "description": "Credit transaction amount, current month."
+          },
+          "amt_credit_txn_m1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M1",
+            "description": "Credit transaction amount, month-1."
+          },
+          "amt_credit_txn_m2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M2",
+            "description": "Credit transaction amount, month-2."
+          },
+          "amt_credit_txn_m3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M3",
+            "description": "Credit transaction amount, month-3."
+          },
+          "amt_credit_txn_m4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M4",
+            "description": "Credit transaction amount, month-4."
+          },
+          "amt_credit_txn_m5": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M5",
+            "description": "Credit transaction amount, month-5."
+          },
+          "amt_credit_txn_m6": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Credit Txn M6",
+            "description": "Credit transaction amount, month-6."
+          },
+          "all_acc_av_balance_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Acc Av Balance C90",
+            "description": "Average balance across all accounts, last 90 days."
+          },
+          "all_acc_latest_balance_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Acc Latest Balance C90",
+            "description": "Latest balance across all accounts."
+          },
+          "surplus": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surplus",
+            "description": "Monthly surplus (income minus expenses) in INR."
+          },
+          "total_emi_loan_all_acc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc",
+            "description": "Current total EMI across all loan accounts."
+          },
+          "total_emi_all_acc_m0123": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi All Acc M0123",
+            "description": "Aggregate EMI for months 0–3 across all accounts."
+          },
+          "total_emi_loan_all_acc_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc C30",
+            "description": "Total EMI, last 30 days."
+          },
+          "total_emi_loan_all_acc_c60": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc C60",
+            "description": "Total EMI, last 60 days."
+          },
+          "total_emi_loan_all_acc_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc C90",
+            "description": "Total EMI, last 90 days."
+          },
+          "total_emi_loan_all_acc_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc C180",
+            "description": "Total EMI, last 180 days."
+          },
+          "total_emi_loan_all_acc_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Emi Loan All Acc C360",
+            "description": "Total EMI, last 360 days."
+          },
+          "cnt_active_loan_accounts_m1": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Active Loan Accounts M1",
+            "description": "Active loan account count as of month-1."
+          },
+          "cnt_active_loan_disbursed_gt_100k": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Active Loan Disbursed Gt 100K",
+            "description": "Active loans > 1 lakh count."
+          },
+          "loan_disbursed_latest_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Disbursed Latest Date",
+            "description": "Date of most recent loan disbursement."
+          },
+          "cnt_loan_disbursed_last_6mo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Loan Disbursed Last 6Mo",
+            "description": "Loans disbursed in the last 6 months."
+          },
+          "cnt_loan_disbursed_gt_100k": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Loan Disbursed Gt 100K",
+            "description": "Loans disbursed > 1 lakh count."
+          },
+          "cnt_delinquncy_loan_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Loan C30",
+            "description": "Loan delinquency count, last 30 days."
+          },
+          "cnt_delinquncy_loan_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Loan C90",
+            "description": "Loan delinquency count, last 90 days."
+          },
+          "cnt_delinquncy_loan_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Loan C180",
+            "description": "Loan delinquency count, last 180 days."
+          },
+          "cnt_delinquncy_loan_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Loan C360",
+            "description": "Loan delinquency count, last 360 days."
+          },
+          "amt_delinquncy_loan_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Loan C30",
+            "description": "Loan delinquency amount, last 30 days."
+          },
+          "amt_delinquncy_loan_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Loan C90",
+            "description": "Loan delinquency amount, last 90 days."
+          },
+          "amt_delinquncy_loan_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Loan C180",
+            "description": "Loan delinquency amount, last 180 days."
+          },
+          "amt_delinquncy_loan_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Loan C360",
+            "description": "Loan delinquency amount, last 360 days."
+          },
+          "cnt_delinquncy_cc_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Cc C30",
+            "description": "Credit card delinquency count, last 30 days."
+          },
+          "cnt_delinquncy_cc_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Cc C90",
+            "description": "Credit card delinquency count, last 90 days."
+          },
+          "cnt_delinquncy_cc_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Cc C180",
+            "description": "Credit card delinquency count, last 180 days."
+          },
+          "cnt_delinquncy_cc_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Cc C360",
+            "description": "Credit card delinquency count, last 360 days."
+          },
+          "amt_delinquncy_cc_c30": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Cc C30",
+            "description": "Credit card delinquency amount, last 30 days."
+          },
+          "amt_delinquncy_cc_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Cc C90",
+            "description": "Credit card delinquency amount, last 90 days."
+          },
+          "amt_delinquncy_cc_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Cc C180",
+            "description": "Credit card delinquency amount, last 180 days."
+          },
+          "amt_delinquncy_cc_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquncy Cc C360",
+            "description": "Credit card delinquency amount, last 360 days."
+          },
+          "cc_utilisation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cc Utilisation",
+            "description": "Credit card utilisation ratio."
+          },
+          "cc_bill_latest_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cc Bill Latest Date",
+            "description": "Date of latest CC bill."
+          },
+          "cc_latest_bill_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cc Latest Bill Date",
+            "description": "Alias for latest CC bill date."
+          },
+          "loan_applications_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Applications Flag C30",
+            "description": "Loan application detected in last 30 days."
+          },
+          "loan_applications_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Applications Flag C90",
+            "description": "Loan application detected in last 90 days."
+          },
+          "loan_applications_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Applications Flag C180",
+            "description": "Loan application detected in last 180 days."
+          },
+          "loan_applications_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Applications Flag C360",
+            "description": "Loan application detected in last 360 days."
+          },
+          "loan_approval_sms_flag_c30_v2": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Approval Sms Flag C30 V2",
+            "description": "Loan approval SMS detected in last 30 days."
+          },
+          "loan_approval_sms_flag_c90_v2": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Approval Sms Flag C90 V2",
+            "description": "Loan approval SMS detected in last 90 days."
+          },
+          "loan_approval_sms_flag_c180_v2": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Approval Sms Flag C180 V2",
+            "description": "Loan approval SMS detected in last 180 days."
+          },
+          "loan_approval_sms_flag_c360_v2": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Approval Sms Flag C360 V2",
+            "description": "Loan approval SMS detected in last 360 days."
+          },
+          "home_loan_emi_deduction_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Loan Emi Deduction Flag C30",
+            "description": "Home loan EMI deduction detected in last 30 days."
+          },
+          "home_loan_emi_deduction_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Loan Emi Deduction Flag C90",
+            "description": "Home loan EMI deduction detected in last 90 days."
+          },
+          "home_loan_emi_deduction_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Loan Emi Deduction Flag C180",
+            "description": "Home loan EMI deduction detected in last 180 days."
+          },
+          "home_loan_emi_deduction_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Loan Emi Deduction Flag C360",
+            "description": "Home loan EMI deduction detected in last 360 days."
+          },
+          "cnt_health_insurance_application_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Application C30",
+            "description": "Health insurance applications, last 30 days."
+          },
+          "cnt_health_insurance_application_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Application C90",
+            "description": "Health insurance applications, last 90 days."
+          },
+          "cnt_health_insurance_application_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Application C180",
+            "description": "Health insurance applications, last 180 days."
+          },
+          "cnt_health_insurance_application_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Application C360",
+            "description": "Health insurance applications, last 360 days."
+          },
+          "cnt_health_insurance_expired_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Expired C30",
+            "description": "Health insurance expired events, last 30 days."
+          },
+          "cnt_health_insurance_expired_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Expired C90",
+            "description": "Health insurance expired events, last 90 days."
+          },
+          "cnt_health_insurance_expired_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Expired C180",
+            "description": "Health insurance expired events, last 180 days."
+          },
+          "cnt_health_insurance_expired_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Expired C360",
+            "description": "Health insurance expired events, last 360 days."
+          },
+          "cnt_health_insurance_renewal_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Renewal C30",
+            "description": "Health insurance renewals, last 30 days."
+          },
+          "cnt_health_insurance_renewal_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Renewal C90",
+            "description": "Health insurance renewals, last 90 days."
+          },
+          "cnt_health_insurance_renewal_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Renewal C180",
+            "description": "Health insurance renewals, last 180 days."
+          },
+          "cnt_health_insurance_renewal_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Health Insurance Renewal C360",
+            "description": "Health insurance renewals, last 360 days."
+          },
+          "health_insurance_application_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Application Flag C30",
+            "description": "Health insurance application flag, last 30 days."
+          },
+          "health_insurance_application_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Application Flag C90",
+            "description": "Health insurance application flag, last 90 days."
+          },
+          "health_insurance_application_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Application Flag C180",
+            "description": "Health insurance application flag, last 180 days."
+          },
+          "health_insurance_application_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Application Flag C360",
+            "description": "Health insurance application flag, last 360 days."
+          },
+          "health_insurance_expired_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Expired Flag C30",
+            "description": "Health insurance expired flag, last 30 days."
+          },
+          "health_insurance_expired_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Expired Flag C90",
+            "description": "Health insurance expired flag, last 90 days."
+          },
+          "health_insurance_expired_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Expired Flag C180",
+            "description": "Health insurance expired flag, last 180 days."
+          },
+          "health_insurance_expired_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Expired Flag C360",
+            "description": "Health insurance expired flag, last 360 days."
+          },
+          "health_insurance_renewal_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Renewal Flag C30",
+            "description": "Health insurance renewal flag, last 30 days."
+          },
+          "health_insurance_renewal_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Renewal Flag C90",
+            "description": "Health insurance renewal flag, last 90 days."
+          },
+          "health_insurance_renewal_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Renewal Flag C180",
+            "description": "Health insurance renewal flag, last 180 days."
+          },
+          "health_insurance_renewal_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Insurance Renewal Flag C360",
+            "description": "Health insurance renewal flag, last 360 days."
+          },
+          "cnt_life_insurance_application_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Application C30",
+            "description": "Life insurance applications, last 30 days."
+          },
+          "cnt_life_insurance_application_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Application C90",
+            "description": "Life insurance applications, last 90 days."
+          },
+          "cnt_life_insurance_application_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Application C180",
+            "description": "Life insurance applications, last 180 days."
+          },
+          "cnt_life_insurance_application_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Application C360",
+            "description": "Life insurance applications, last 360 days."
+          },
+          "cnt_life_insurance_expired_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Expired C360",
+            "description": "Life insurance expired events, last 360 days."
+          },
+          "cnt_life_insurance_renewal_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Life Insurance Renewal C360",
+            "description": "Life insurance renewals, last 360 days."
+          },
+          "life_insurance_application_flag_c30": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Application Flag C30",
+            "description": "Life insurance application flag, last 30 days."
+          },
+          "life_insurance_application_flag_c90": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Application Flag C90",
+            "description": "Life insurance application flag, last 90 days."
+          },
+          "life_insurance_application_flag_c180": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Application Flag C180",
+            "description": "Life insurance application flag, last 180 days."
+          },
+          "life_insurance_application_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Application Flag C360",
+            "description": "Life insurance application flag, last 360 days."
+          },
+          "life_insurance_expired_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Expired Flag C360",
+            "description": "Life insurance expired flag, last 360 days."
+          },
+          "life_insurance_renewal_flag_c360": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Life Insurance Renewal Flag C360",
+            "description": "Life insurance renewal flag, last 360 days."
+          },
+          "amt_adv_tax_y0_q1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y0 Q1",
+            "description": "Advance tax year-0 Q1 amount."
+          },
+          "amt_adv_tax_y0_q2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y0 Q2",
+            "description": "Advance tax year-0 Q2 amount."
+          },
+          "amt_adv_tax_y0_q3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y0 Q3",
+            "description": "Advance tax year-0 Q3 amount."
+          },
+          "amt_adv_tax_y0_q4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y0 Q4",
+            "description": "Advance tax year-0 Q4 amount."
+          },
+          "amt_adv_tax_y1_q1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y1 Q1",
+            "description": "Advance tax year-1 Q1 amount."
+          },
+          "amt_adv_tax_y1_q2": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y1 Q2",
+            "description": "Advance tax year-1 Q2 amount."
+          },
+          "amt_adv_tax_y1_q3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y1 Q3",
+            "description": "Advance tax year-1 Q3 amount."
+          },
+          "amt_adv_tax_y1_q4": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Adv Tax Y1 Q4",
+            "description": "Advance tax year-1 Q4 amount."
+          },
+          "amt_tds_filed_y0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Tds Filed Y0",
+            "description": "TDS amount filed, current year."
+          },
+          "amt_tds_filed_y1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Tds Filed Y1",
+            "description": "TDS amount filed, previous year."
+          },
+          "avg_monthly_tds_y0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Tds Y0",
+            "description": "Average monthly TDS, current year."
+          },
+          "avg_monthly_tds_y1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Monthly Tds Y1",
+            "description": "Average monthly TDS, previous year."
+          },
+          "tds_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tds Time",
+            "description": "Timestamp of latest TDS data."
+          },
+          "itr_filed_flag_y0": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itr Filed Flag Y0",
+            "description": "ITR filed in current financial year."
+          },
+          "itr_filed_flag_y1": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itr Filed Flag Y1",
+            "description": "ITR filed in previous financial year."
+          },
+          "amt_gst_filed_y0": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Gst Filed Y0",
+            "description": "GST amount filed, current year."
+          },
+          "amt_gst_filed_y1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Gst Filed Y1",
+            "description": "GST amount filed, previous year."
+          },
+          "gst_filed_flag_y0": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Filed Flag Y0",
+            "description": "GST filed in current year."
+          },
+          "gst_filed_flag_y1": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Filed Flag Y1",
+            "description": "GST filed in previous year."
+          },
+          "gst_bill_not_filed_c7_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Bill Not Filed C7 Flag",
+            "description": "GST bill not filed in last 7 days flag."
+          },
+          "gst_bill_not_filed_c30_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Bill Not Filed C30 Flag",
+            "description": "GST bill not filed in last 30 days flag."
+          },
+          "gst_bill_not_filed_c180_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Bill Not Filed C180 Flag",
+            "description": "GST bill not filed in last 180 days flag."
+          },
+          "num_gst_bill_not_filed_c7": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Gst Bill Not Filed C7",
+            "description": "Count of GST bills not filed, last 7 days."
+          },
+          "num_gst_bill_not_filed_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Gst Bill Not Filed C30",
+            "description": "Count of GST bills not filed, last 30 days."
+          },
+          "num_gst_bill_not_filed_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Num Gst Bill Not Filed C180",
+            "description": "Count of GST bills not filed, last 180 days."
+          },
+          "gst_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gst Time",
+            "description": "Timestamp of latest GST data."
+          },
+          "amt_elss_investment_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Elss Investment C90",
+            "description": "ELSS investment amount, last 90 days."
+          },
+          "amt_elss_investment_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Elss Investment C180",
+            "description": "ELSS investment amount, last 180 days."
+          },
+          "amt_elss_investment_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Elss Investment C360",
+            "description": "ELSS investment amount, last 360 days."
+          },
+          "amt_nps_investment_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Nps Investment C90",
+            "description": "NPS investment amount, last 90 days."
+          },
+          "amt_nps_investment_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Nps Investment C180",
+            "description": "NPS investment amount, last 180 days."
+          },
+          "amt_nps_investment_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Nps Investment C360",
+            "description": "NPS investment amount, last 360 days."
+          },
+          "cnt_nps_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Nps Trx",
+            "description": "Total NPS transaction count."
+          },
+          "nps_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nps Flag",
+            "description": "NPS investment detected."
+          },
+          "nps_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nps Trx Recency",
+            "description": "Recency of latest NPS transaction."
+          },
+          "investment_balance_nps_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Nps Latest",
+            "description": "Latest NPS investment balance."
+          },
+          "amt_ppf_investment_c90": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Ppf Investment C90",
+            "description": "PPF investment amount, last 90 days."
+          },
+          "amt_ppf_investment_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Ppf Investment C180",
+            "description": "PPF investment amount, last 180 days."
+          },
+          "amt_ppf_investment_c360": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Ppf Investment C360",
+            "description": "PPF investment amount, last 360 days."
+          },
+          "cnt_ppf_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Ppf Trx",
+            "description": "Total PPF transaction count."
+          },
+          "ppf_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppf Flag",
+            "description": "PPF investment detected."
+          },
+          "ppf_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ppf Trx Recency",
+            "description": "Recency of latest PPF transaction."
+          },
+          "investment_balance_ppf_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Ppf Latest",
+            "description": "Latest PPF investment balance."
+          },
+          "epf_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Flag",
+            "description": "EPF contributions detected."
+          },
+          "epf_claim_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Claim Recency",
+            "description": "Recency of latest EPF claim."
+          },
+          "epf_credit_avg_3mo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Credit Avg 3Mo",
+            "description": "Average EPF credit over 3 months."
+          },
+          "epf_credit_avg_6mo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Credit Avg 6Mo",
+            "description": "Average EPF credit over 6 months."
+          },
+          "epf_credit_latest_6mo": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Credit Latest 6Mo",
+            "description": "Total EPF credit in latest 6 months."
+          },
+          "epf_latest_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Latest Balance",
+            "description": "Latest EPF balance."
+          },
+          "epf_latest_balance_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Latest Balance Date",
+            "description": "Date of latest EPF balance."
+          },
+          "epf_latest_claim_amt": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Latest Claim Amt",
+            "description": "Latest EPF claim amount."
+          },
+          "epf_vintage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Vintage",
+            "description": "EPF account vintage."
+          },
+          "epf_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epf Time",
+            "description": "Timestamp of latest EPF data."
+          },
+          "amt_mf_portfolio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Mf Portfolio",
+            "description": "Total MF portfolio value."
+          },
+          "cnt_mf_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Mf Trx",
+            "description": "Total MF transaction count."
+          },
+          "mf_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mf Flag",
+            "description": "MF investment detected."
+          },
+          "mf_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mf Trx Recency",
+            "description": "Recency of latest MF transaction."
+          },
+          "investment_amt_mf": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Amt Mf",
+            "description": "Total MF investment amount."
+          },
+          "investment_amt_mf_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Amt Mf Latest",
+            "description": "Latest MF investment amount."
+          },
+          "investment_balance_mf_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Mf Latest",
+            "description": "Latest MF balance."
+          },
+          "cnt_fd_accounts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Accounts",
+            "description": "Total FD account count."
+          },
+          "cnt_fd_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Trx",
+            "description": "Total FD transaction count."
+          },
+          "fd_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fd Flag",
+            "description": "FD investment detected."
+          },
+          "fd_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fd Trx Recency",
+            "description": "Recency of latest FD transaction."
+          },
+          "investment_amt_fd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Amt Fd",
+            "description": "Total FD investment amount."
+          },
+          "investment_balance_fd_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Fd Latest",
+            "description": "Latest FD balance."
+          },
+          "sip_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sip Flag",
+            "description": "SIP investment detected."
+          },
+          "sip_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sip Trx Recency",
+            "description": "Recency of latest SIP transaction."
+          },
+          "cnt_sip_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Sip Trx",
+            "description": "Total SIP transaction count."
+          },
+          "investment_amt_sip": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Amt Sip",
+            "description": "Total SIP investment amount."
+          },
+          "investment_balance_sip_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Sip Latest",
+            "description": "Latest SIP balance."
+          },
+          "rd_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rd Flag",
+            "description": "RD investment detected."
+          },
+          "rd_trx_recency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rd Trx Recency",
+            "description": "Recency of latest RD transaction."
+          },
+          "cnt_rd_trx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Rd Trx",
+            "description": "Total RD transaction count."
+          },
+          "amt_rd_accounts_c180": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Rd Accounts C180",
+            "description": "RD account amounts, last 180 days."
+          },
+          "investment_amt_rd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Amt Rd",
+            "description": "Total RD investment amount."
+          },
+          "investment_balance_rd_latest": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Balance Rd Latest",
+            "description": "Latest RD balance."
+          },
+          "cnt_fd_rd_mf_maturity_c30": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Rd Mf Maturity C30",
+            "description": "FD/RD/MF maturity count, last 30 days."
+          },
+          "cnt_fd_rd_mf_maturity_c60": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Rd Mf Maturity C60",
+            "description": "FD/RD/MF maturity count, last 60 days."
+          },
+          "cnt_fd_rd_mf_maturity_c90": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Rd Mf Maturity C90",
+            "description": "FD/RD/MF maturity count, last 90 days."
+          },
+          "cnt_fd_rd_mf_maturity_c180": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Rd Mf Maturity C180",
+            "description": "FD/RD/MF maturity count, last 180 days."
+          },
+          "cnt_fd_rd_mf_maturity_c360": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Fd Rd Mf Maturity C360",
+            "description": "FD/RD/MF maturity count, last 360 days."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "InsightFinboxFeatures",
+        "description": "Finbox feature set for the insights API.\n\nContains hundreds of flat key-value metrics plus several structured\nsub-objects. All fields are optional. Unknown keys are accepted via\n``extra=\"allow\"`` to remain forward-compatible with new Finbox features."
+      },
+      "InsightGroups": {
+        "properties": {
+          "top_insight": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InsightItem"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Single most important cross-pillar insight (may be null)."
+          },
+          "spending": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "type": "array",
+            "title": "Spending",
+            "description": "Spending pillar insight cards."
+          },
+          "borrowing": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "type": "array",
+            "title": "Borrowing",
+            "description": "Borrowing pillar insight cards."
+          },
+          "protection": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "type": "array",
+            "title": "Protection",
+            "description": "Protection pillar insight cards."
+          },
+          "wealth": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "type": "array",
+            "title": "Wealth",
+            "description": "Wealth pillar insight cards."
+          },
+          "tax": {
+            "items": {
+              "$ref": "#/components/schemas/InsightItem"
+            },
+            "type": "array",
+            "title": "Tax",
+            "description": "Tax pillar insight cards."
+          }
+        },
+        "type": "object",
+        "title": "InsightGroups",
+        "description": "Insight cards grouped by pillar, with an optional cross-pillar top insight."
+      },
+      "InsightInputRequest": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/FfrRequestMetadata",
+            "description": "Request envelope with correlation IDs and pillar selection."
+          },
+          "data": {
+            "$ref": "#/components/schemas/FfrScreenData",
+            "description": "Structured financial data payload."
+          },
+          "features": {
+            "$ref": "#/components/schemas/app__models__insight__Features",
+            "description": "External feature blocks (e.g. Finbox)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata",
+          "data",
+          "features"
+        ],
+        "title": "InsightInputRequest",
+        "description": "Request body for `POST /v1/ffr_insight`.\n\nContains the request metadata, financial data payload, and optional\nexternal features used to generate per-pillar insight cards."
+      },
+      "InsightItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique insight identifier."
+          },
+          "theme": {
+            "type": "string",
+            "title": "Theme",
+            "description": "Thematic tag, e.g. `Overspending`, `Debt Risk`."
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline",
+            "description": "Short, attention-grabbing headline."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed explanation of the insight."
+          },
+          "cta": {
+            "$ref": "#/components/schemas/CTAObject",
+            "description": "Call-to-action for this insight."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "theme",
+          "headline",
+          "description",
+          "cta"
+        ],
+        "title": "InsightItem",
+        "description": "A single LLM-generated insight card.",
+        "examples": [
+          {
+            "cta": {
+              "action": "jio://cashflow/view",
+              "text": "View Spending"
+            },
+            "description": "Consider reviewing discretionary expenses to improve your savings buffer.",
+            "headline": "Your spend-to-income ratio is above 70%",
+            "id": "spending_high_ratio",
+            "theme": "Overspending"
+          }
+        ]
+      },
+      "InsightOutputResponse": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/InsightResponseMetadata",
+            "description": "Response metadata (customer_id, request_id, timestamp, version)."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InsightErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details; null on success."
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InsightGroups"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Grouped insight cards; null on error."
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata"
+        ],
+        "title": "InsightOutputResponse",
+        "description": "Response body for `POST /v1/ffr_insight`.\n\nOn success, `data` contains the grouped insight cards and `error` is null.\nOn failure, `error` contains the error details and `data` is null."
+      },
+      "InsightResponseMetadata": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id",
+            "description": "Echo of the input customer_id."
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "Echo of the input request_id."
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO-8601 response generation timestamp."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API version string."
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "request_id",
+          "timestamp",
+          "version"
+        ],
+        "title": "InsightResponseMetadata",
+        "description": "Metadata envelope for insight responses."
+      },
+      "LoanAccount": {
+        "properties": {
+          "loan_acc_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Acc Number",
+            "description": "Loan account number."
+          },
+          "lender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lender",
+            "description": "Lender name, e.g. `\"kotak\"`, `\"home credit\"`."
+          },
+          "amt_loan_acc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Loan Acc",
+            "description": "Loan principal amount (INR)."
+          },
+          "loan_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loan Type",
+            "description": "Loan type, e.g. `\"two_wheeler_loan\"`, `\"home_loan\"`."
+          },
+          "emi_loan_acc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emi Loan Acc",
+            "description": "Monthly EMI for this loan (INR)."
+          },
+          "amt_delinquency_acc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amt Delinquency Acc",
+            "description": "Outstanding delinquency amount."
+          },
+          "max_dpd": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Dpd",
+            "description": "Maximum days past due."
+          },
+          "cnt_delinquncy_acc": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cnt Delinquncy Acc",
+            "description": "Number of delinquency events."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "LoanAccount",
+        "description": "Single loan entry inside ``loan_profile``."
+      },
+      "MonthValue": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month",
+            "description": "Year-month string, e.g. `2025-03`."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Value",
+            "description": "Numeric value for the month."
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "value"
+        ],
+        "title": "MonthValue",
+        "description": "A single month-value data point used across time-series financial metrics.",
+        "examples": [
+          {
+            "month": "2025-03",
+            "value": 45000
+          }
+        ]
+      },
+      "OverallSummary": {
+        "properties": {
+          "overview": {
+            "type": "string",
+            "title": "Overview",
+            "description": "One-paragraph holistic overview of the user's financial health.",
+            "default": ""
+          },
+          "whats_going_well": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Whats Going Well",
+            "description": "List of positive financial highlights / strengths."
+          },
+          "whats_needs_attention": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Whats Needs Attention",
+            "description": "List of areas that need the user's attention or action."
+          }
+        },
+        "type": "object",
+        "title": "OverallSummary",
+        "description": "Holistic financial summary with strengths and areas needing attention.",
+        "examples": [
+          {
+            "overview": "Your finances are largely on track with strong savings discipline.",
+            "whats_going_well": [
+              "Consistent monthly savings above 30%",
+              "Good credit score trajectory"
+            ],
+            "whats_needs_attention": [
+              "Health insurance cover is below recommended levels"
+            ]
+          }
+        ]
+      },
+      "Payload": {
+        "properties": {
+          "metric_summaries_ui": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Metric Summaries Ui",
+            "description": "Map of metric key to a UI-ready prose summary string. Keys correspond to pillar metrics (e.g. `spending_score`, `emi_burden`)."
+          },
+          "overall_summary": {
+            "$ref": "#/components/schemas/OverallSummary"
+          }
+        },
+        "type": "object",
+        "title": "Payload",
+        "description": "Success payload containing per-metric prose and an overall summary."
+      },
+      "PortfolioSlice": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Asset class or category name."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "title": "Value",
+            "description": "Allocation value (absolute or percentage)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "PortfolioSlice",
+        "description": "One slice of a portfolio diversification breakdown.",
+        "examples": [
+          {
+            "name": "equity",
+            "value": 60
+          }
+        ]
+      },
+      "ResponseMetadata": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id",
+            "description": "Echo of the input request_id, or a server-generated UUID."
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp",
+            "description": "ISO-8601 response generation timestamp."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API version string."
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Service identifier, e.g. `\"pillar_summary_api\"`."
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel",
+            "description": "Channel identifier, e.g. `\"api\"`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "timestamp",
+          "version",
+          "source",
+          "channel"
+        ],
+        "title": "ResponseMetadata",
+        "description": "Metadata envelope for summary responses."
+      },
+      "RuleBasedInsightItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Unique insight identifier."
+          },
+          "theme": {
+            "type": "string",
+            "title": "Theme",
+            "description": "Thematic category of the insight."
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline",
+            "description": "Short headline text."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Detailed description body."
+          },
+          "cta": {
+            "$ref": "#/components/schemas/CTAObject",
+            "description": "Call-to-action for this insight."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "theme",
+          "headline",
+          "description",
+          "cta"
+        ],
+        "title": "RuleBasedInsightItem",
+        "description": "A single pre-computed (rule-based) insight card supplied by the client."
+      },
+      "RuleBasedInsights": {
+        "properties": {
+          "spending": {
+            "items": {
+              "$ref": "#/components/schemas/RuleBasedInsightItem"
+            },
+            "type": "array",
+            "title": "Spending",
+            "description": "Spending pillar rule-based insights."
+          },
+          "borrowing": {
+            "items": {
+              "$ref": "#/components/schemas/RuleBasedInsightItem"
+            },
+            "type": "array",
+            "title": "Borrowing",
+            "description": "Borrowing pillar rule-based insights."
+          },
+          "protection": {
+            "items": {
+              "$ref": "#/components/schemas/RuleBasedInsightItem"
+            },
+            "type": "array",
+            "title": "Protection",
+            "description": "Protection pillar rule-based insights."
+          },
+          "wealth": {
+            "items": {
+              "$ref": "#/components/schemas/RuleBasedInsightItem"
+            },
+            "type": "array",
+            "title": "Wealth",
+            "description": "Wealth pillar rule-based insights."
+          },
+          "tax": {
+            "items": {
+              "$ref": "#/components/schemas/RuleBasedInsightItem"
+            },
+            "type": "array",
+            "title": "Tax",
+            "description": "Tax pillar rule-based insights."
+          }
+        },
+        "type": "object",
+        "title": "RuleBasedInsights",
+        "description": "Per-pillar rule-based insight cards supplied by the client, used as\nseed data alongside LLM-generated insights."
+      },
+      "SummaryRequest": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/FfrRequestMetadata",
+            "description": "Request envelope with correlation IDs and pillar selection."
+          },
+          "data": {
+            "$ref": "#/components/schemas/FfrScreenData",
+            "description": "Structured financial data payload."
+          },
+          "features": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/app__models__common__Features"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional external feature blocks (e.g. Finbox)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata",
+          "data"
+        ],
+        "title": "SummaryRequest",
+        "description": "Request body for `POST /v1/ffr_summary`.\n\nContains the request metadata, financial data payload, and optional\nexternal features used to generate per-pillar prose summaries.\nUnknown fields (e.g. legacy `\"provider\"`) are silently ignored."
+      },
+      "SummaryResponse": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/ResponseMetadata",
+            "description": "Response metadata."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorBody"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error details; null on success."
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Payload"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Summary payload; null on error."
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata"
+        ],
+        "title": "SummaryResponse",
+        "description": "Response body for `POST /v1/ffr_summary`.\n\nOn success, `data` contains the metric summaries and overall summary and\n`error` is null.  On failure, `error` contains the error details and\n`data` is null."
+      },
+      "ValidationDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Dot-path of the field that failed validation."
+          },
+          "issue": {
+            "type": "string",
+            "title": "Issue",
+            "description": "Human-readable description of the validation issue."
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "issue"
+        ],
+        "title": "ValidationDetail",
+        "description": "Detail entry for a single validation failure."
+      },
+      "app__models__common__Features": {
+        "properties": {
+          "finbox": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinboxFeatures"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Finbox-derived feature set."
+          }
+        },
+        "type": "object",
+        "title": "Features",
+        "description": "Feature blocks from external providers (e.g. Finbox)."
+      },
+      "app__models__insight__Features": {
+        "properties": {
+          "finbox": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InsightFinboxFeatures"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Finbox feature set. All fields are optional; unknown keys are accepted."
+          }
+        },
+        "type": "object",
+        "title": "Features",
+        "description": "Feature data supplied alongside the insight request (e.g. Finbox signals)."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "FFR",
+      "description": "Financial Fitness Report endpoints — pillar summaries and insight cards."
+    }
+  ]
+}

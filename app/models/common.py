@@ -155,8 +155,7 @@ class RuleBasedInsightItem(BaseModel):
     theme: str = Field(description="Thematic category of the insight.")
     headline: str = Field(description="Short headline text.")
     description: str = Field(description="Detailed description body.")
-    cta: CTAObject = Field(description="Call-to-action for this insight.")
-
+    cta: CTAObject | None = Field(default=None, description="Call-to-action for this insight.")
 
 class RuleBasedInsights(BaseModel):
     """Per-pillar rule-based insight cards supplied by the client, used as

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import hashlib
 import json
 import logging
 import re
-import threading
 from typing import Any
 
 from google import genai
@@ -35,20 +36,21 @@ _insight_system_cache: dict[str, str] = {}
 # ── Context-cache management ─────────────────────────────────────────────────
 
 _context_cache_map: dict[tuple[str, str], str] = {}
-_context_cache_lock = threading.Lock()
+_context_cache_lock = asyncio.Lock()
 
-def _resolve_max_output_tokens(config: dict) -> int:
-    """Read max_output_tokens from config with a safe fallback."""
+def _resolve_max_output_tokens(config: dict, key: str = "max_tokens_insight") -> int:
+    """Read a token-budget key from config with a safe fallback chain."""
+    raw = config.get(key) or config.get("max_output_tokens") or _DEFAULTS.get(key, 2048)
     try:
-        return int(config.get("max_output_tokens", 16384))
+        return int(raw)
     except (TypeError, ValueError):
-        return 16384
+        return 2048
 
 def _system_prompt_hash(system_msg: str) -> str:
     return hashlib.sha256(system_msg.encode("utf-8")).hexdigest()
 
 
-def _get_or_create_context_cache(
+async def _get_or_create_context_cache(
     client: genai.Client,
     model: str,
     system_msg: str,
@@ -65,11 +67,11 @@ def _get_or_create_context_cache(
 
     key = (model, _system_prompt_hash(system_msg))
 
-    with _context_cache_lock:
+    async with _context_cache_lock:
         cached_name = _context_cache_map.get(key)
         if cached_name:
             try:
-                client.caches.get(name=cached_name)
+                await asyncio.to_thread(client.caches.get, name=cached_name)
                 return cached_name
             except Exception:
                 _context_cache_map.pop(key, None)
@@ -79,7 +81,8 @@ def _get_or_create_context_cache(
         ttl += "s"
 
     try:
-        cached = client.caches.create(
+        cached = await asyncio.to_thread(
+            client.caches.create,
             model=model,
             config=genai_types.CreateCachedContentConfig(
                 system_instruction=system_msg,
@@ -87,7 +90,7 @@ def _get_or_create_context_cache(
                 ttl=ttl,
             ),
         )
-        with _context_cache_lock:
+        async with _context_cache_lock:
             _context_cache_map[key] = cached.name
         logger.info("Created context cache %s for model=%s (ttl=%s)", cached.name, model, ttl)
         return cached.name
@@ -115,11 +118,15 @@ def get_insight_system_prompt() -> str:
     return text
 
 
-# ── Prompt loading ───────────────────────────────────────────────────────────
+# ── Prompt loading (cached in memory) ────────────────────────────────────────
 
 
+@functools.lru_cache(maxsize=32)
 def load_prompt(prompt_file: str) -> tuple[str, str]:
-    """Load a prompt template file and split it into (system_msg, user_template) by @@SYSTEM@@/@@USER@@ markers."""
+    """Load a prompt template file and split it into (system_msg, user_template) by @@SYSTEM@@/@@USER@@ markers.
+
+    Results are cached in memory after the first read.
+    """
     path = PROMPTS_DIR / prompt_file
     if not path.exists():
         raise FileNotFoundError(f"Prompt file not found: {path}")
@@ -400,11 +407,14 @@ def build_user_message(
     return result
 
 
-# ── Gemini client ────────────────────────────────────────────────────────────
+# ── Gemini client (cached singleton) ─────────────────────────────────────────
+
+_client_cache: dict[tuple[str, str], genai.Client] = {}
 
 
 def _gemini_client(config: dict) -> genai.Client:
-    """Build google-genai Client.
+    """Return a cached google-genai Client, creating one only when the
+    credentials change.
 
     - **Direct Google AI** (no ``GEMINI_BASE_URL``): ``api_key`` → ``x-goog-api-key``.
     - **Org gateway** (``GEMINI_BASE_URL`` set): Vertex mode with
@@ -412,6 +422,12 @@ def _gemini_client(config: dict) -> genai.Client:
     """
     token = (config.get("gemini_api_key") or "").strip()
     base = (config.get("gemini_base_url") or "").strip().rstrip("/")
+    cache_key = (token, base)
+
+    cached = _client_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     if base:
         if not token:
             raise ValueError(
@@ -425,19 +441,23 @@ def _gemini_client(config: dict) -> genai.Client:
         project = config.get("gemini_vertex_project", _DEFAULTS["gemini_vertex_project"])
         location = config.get("gemini_vertex_location", _DEFAULTS["gemini_vertex_location"])
         credentials = Credentials(token)
-        return genai.Client(
+        client = genai.Client(
             vertexai=True,
             project=project,
             location=location,
             credentials=credentials,
             http_options=http_options,
         )
-    if not token:
+    elif not token:
         raise ValueError(
             "Missing GEMINI_API_KEY. For Google AI set GEMINI_API_KEY to your API key; "
             "for an org gateway also set GEMINI_BASE_URL."
         )
-    return genai.Client(api_key=token)
+    else:
+        client = genai.Client(api_key=token)
+
+    _client_cache[cache_key] = client
+    return client
 
 
 def _temperature_from_config(config: dict, key: str, default: float) -> float:
@@ -451,7 +471,7 @@ def _temperature_from_config(config: dict, key: str, default: float) -> float:
         return default
 
 
-def _call_gemini(
+async def _call_gemini(
     system_msg: str,
     user_msg: str,
     config: dict,
@@ -481,7 +501,7 @@ def _call_gemini(
         },
     ) as span:
         client = _gemini_client(config)
-        cached_name = _get_or_create_context_cache(client, model, system_msg, config)
+        cached_name = await _get_or_create_context_cache(client, model, system_msg, config)
         span.set_attribute("llm.context_cache", bool(cached_name))
 
         if cached_name:
@@ -500,7 +520,8 @@ def _call_gemini(
             )
 
         try:
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=user_msg,
                 config=cfg,
@@ -523,7 +544,8 @@ def _call_gemini(
                     temperature=temp,
                     max_output_tokens=max_tokens,
                 )
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=user_msg,
                 config=fallback_cfg,
@@ -552,13 +574,18 @@ def _call_gemini(
         return text
 
 
-def call_llm(
+async def call_llm(
     system_msg: str,
     user_msg: str,
     config: dict,
     max_tokens_override: int | None = None,
 ) -> str:
-    """High-level Gemini call with token budget resolution and floor enforcement."""
+    """High-level Gemini call with token budget resolution and floor enforcement.
+
+    When *max_tokens_override* is provided it is used directly — the global
+    floor is only applied to the auto-resolved budget so that callers like
+    ``_call_single_pillar`` and ``_call_synthesis`` can request smaller budgets.
+    """
     tracer = get_tracer(__name__)
     with tracer.start_as_current_span("call_llm"):
         if max_tokens_override is not None:
@@ -571,12 +598,13 @@ def call_llm(
             except (TypeError, ValueError):
                 max_tokens = int(_default_summary)
 
-        try:
-            floor = int(config.get("gemini_max_output_tokens", _DEFAULTS["gemini_max_output_tokens"]))
-        except (TypeError, ValueError):
-            floor = _DEFAULTS["gemini_max_output_tokens"]
-        max_tokens = max(max_tokens, floor)
-        return _call_gemini(system_msg, user_msg, config, max_tokens)
+            try:
+                floor = int(config.get("gemini_max_output_tokens", _DEFAULTS["gemini_max_output_tokens"]))
+            except (TypeError, ValueError):
+                floor = _DEFAULTS["gemini_max_output_tokens"]
+            max_tokens = max(max_tokens, floor)
+
+        return await _call_gemini(system_msg, user_msg, config, max_tokens)
 
 
 # ── JSON parsing ─────────────────────────────────────────────────────────────
@@ -681,30 +709,24 @@ def nonnull_list(v: Any) -> list:
     return v if isinstance(v, list) else []
 
 
-def normalize_overall_summary_short(raw: Any) -> dict[str, str]:
-    """Normalize overall_summary_short — LLM JSON often sets it to null or a bare string."""
-    if isinstance(raw, str):
-        return {"title": "", "summary": sanitize_llm_prose(raw)}
-    d = nonnull_dict(raw)
-    return {
-        "title": sanitize_llm_prose(str(d.get("title", ""))),
-        "summary": sanitize_llm_prose(str(d.get("summary", ""))),
-    }
+# ── Pillar-split prompt helpers (cached in memory) ───────────────────────────
 
 
-# ── Pillar-split prompt helpers ──────────────────────────────────────────────
-
-
+@functools.lru_cache(maxsize=1)
 def _load_pillar_base() -> str:
-    """Load pillar_base.txt (shared global rules). Always reads from disk so edits take effect immediately."""
+    """Load pillar_base.txt (shared global rules). Cached after first read."""
     path = PROMPTS_DIR / "pillar_base.txt"
     if not path.exists():
         raise FileNotFoundError(f"Pillar base prompt not found: {path}")
     return path.read_text(encoding="utf-8").strip()
 
 
+@functools.lru_cache(maxsize=8)
 def load_pillar_prompt(pillar: str) -> tuple[str, str]:
-    """Load a pillar-specific prompt, injecting the shared base, and return (system_msg, user_template)."""
+    """Load a pillar-specific prompt, injecting the shared base, and return (system_msg, user_template).
+
+    Results are cached in memory after the first read.
+    """
     filename = f"pillar_{pillar}.txt"
     path = PROMPTS_DIR / filename
     if not path.exists():

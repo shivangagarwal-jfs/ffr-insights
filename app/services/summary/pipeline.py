@@ -3,14 +3,14 @@
 Supports two modes:
   - **monolithic** (default): single LLM call with the full prompt.
   - **pillar_split**: independent LLM calls per pillar + a synthesis call for
-    overall_summary / overall_summary_short / overall_levers.
+    overall_summary.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import statistics
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from app.config import _DEFAULTS, PILLAR_METRICS, _llm_debug_enabled
@@ -24,8 +24,6 @@ from app.core.llm import (
     load_prompt,
     load_synthesis_prompt,
     nonnull_dict,
-    nonnull_list,
-    normalize_overall_summary_short,
     parse_llm_json,
 )
 from app.core.tracing import get_tracer
@@ -41,6 +39,7 @@ from app.models.common import VALID_PILLARS
 from app.validation.post_llm import (
     ValidationReport,
     sanitize_llm_prose,
+    strip_trailing_period,
     validate_pillar_summary_response,
 )
 
@@ -80,12 +79,10 @@ def _build_scope_preamble(unlocked: set[str]) -> str:
         '   - "data is not available"\n'
         '   - "provided data"\n'
         '   - "unlocked" / "not unlocked" / "locked" (gamified — use scope language instead)\n'
-        "4. overall_summary_short — reference ONLY in-scope pillars.\n"
-        "5. overall_levers — include ONLY in-scope pillars.\n"
-        "6. Data fields for out-of-scope pillars are intentionally blanked out. "
+        "4. Data fields for out-of-scope pillars are intentionally blanked out. "
         "If you see empty values for certain metrics, do NOT speculate about them "
         "or suggest the user address them.\n"
-        "7. The ALL-PILLARS COVERAGE CHECK applies ONLY to in-scope pillars — "
+        "5. The ALL-PILLARS COVERAGE CHECK applies ONLY to in-scope pillars — "
         "you are NOT required to cover out-of-scope pillars beyond the single "
         "scope acknowledgement sentence.\n\n"
     )
@@ -115,29 +112,17 @@ def _filter_llm_result(parsed: dict, unlocked: set[str]) -> dict:
         if k in unlocked
     }
 
-    unlocked_title = {p.title() for p in unlocked}
-    overall_levers = [
-        {
-            "pillar": lv.get("pillar", ""),
-            "improvement_hint": sanitize_llm_prose(str(lv.get("improvement_hint", ""))),
-        }
-        for lv in nonnull_list(parsed.get("overall_levers"))
-        if isinstance(lv, dict) and lv.get("pillar") in unlocked_title
-    ]
-
-    short = normalize_overall_summary_short(parsed.get("overall_summary_short"))
-
     raw_overall = parsed.get("overall_summary")
     if isinstance(raw_overall, dict):
         overall_summary = {
             "overview": sanitize_llm_prose(str(raw_overall.get("overview") or "")),
             "whats_going_well": [
-                sanitize_llm_prose(str(item))
+                strip_trailing_period(sanitize_llm_prose(str(item)))
                 for item in (raw_overall.get("whats_going_well") or [])
                 if isinstance(item, str) and item.strip()
             ],
             "whats_needs_attention": [
-                sanitize_llm_prose(str(item))
+                strip_trailing_period(sanitize_llm_prose(str(item)))
                 for item in (raw_overall.get("whats_needs_attention") or [])
                 if isinstance(item, str) and item.strip()
             ],
@@ -154,8 +139,6 @@ def _filter_llm_result(parsed: dict, unlocked: set[str]) -> dict:
         "metric_summaries_ui": metric_summaries_ui,
         "pillar_summaries": pillar_summaries,
         "overall_summary": overall_summary,
-        "overall_summary_short": short,
-        "overall_levers": overall_levers,
     }
 
 
@@ -502,7 +485,7 @@ def _enrich_data(data: dict) -> None:
 # ── Monolithic pipeline ──────────────────────────────────────────────────────
 
 
-def run_pillar_summary(
+async def run_pillar_summary(
     data: dict,
     config: dict,
     unlocked_pillars: set[str],
@@ -559,7 +542,7 @@ def run_pillar_summary(
                     max_attempts=max_attempts,
                 )
 
-                raw_response = call_llm(system_msg, user_msg, config)
+                raw_response = await call_llm(system_msg, user_msg, config)
 
                 log_llm_output(
                     request_id=request_id,
@@ -649,7 +632,7 @@ def run_pillar_summary(
 # ── Pillar-split pipeline ────────────────────────────────────────────────────
 
 
-def _call_single_pillar(
+async def _call_single_pillar(
     pillar: str,
     data: dict,
     config: dict,
@@ -682,7 +665,8 @@ def _call_single_pillar(
                 max_attempts=max_attempts,
             )
 
-            raw_response = call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            pillar_budget = int(config.get("max_tokens_pillar", _DEFAULTS.get("max_tokens_pillar", 4096)))
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=pillar_budget)
 
             log_llm_output(
                 request_id=request_id,
@@ -733,14 +717,14 @@ def _call_single_pillar(
     )
 
 
-def _call_synthesis(
+async def _call_synthesis(
     data: dict,
     config: dict,
     pillar_outputs: dict[str, dict],
     *,
     request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Run the synthesis LLM call to produce overall_summary, overall_summary_short, overall_levers.
+    """Run the synthesis LLM call to produce overall_summary.
 
     Raises LLMValidationError if no valid output is produced after all retries.
     """
@@ -766,7 +750,8 @@ def _call_synthesis(
                 max_attempts=max_attempts,
             )
 
-            raw_response = call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            synthesis_budget = int(config.get("max_tokens_synthesis", _DEFAULTS.get("max_tokens_synthesis", 4096)))
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=synthesis_budget)
 
             log_llm_output(
                 request_id=request_id,
@@ -789,18 +774,17 @@ def _call_synthesis(
                 print("======================================\n", flush=True)
 
             if parsed:
-                short = normalize_overall_summary_short(parsed.get("overall_summary_short"))
                 raw_overall = parsed.get("overall_summary")
                 if isinstance(raw_overall, dict):
                     overall_summary = {
                         "overview": sanitize_llm_prose(str(raw_overall.get("overview") or "")),
                         "whats_going_well": [
-                            sanitize_llm_prose(str(item))
+                            strip_trailing_period(sanitize_llm_prose(str(item)))
                             for item in (raw_overall.get("whats_going_well") or [])
                             if isinstance(item, str) and item.strip()
                         ],
                         "whats_needs_attention": [
-                            sanitize_llm_prose(str(item))
+                            strip_trailing_period(sanitize_llm_prose(str(item)))
                             for item in (raw_overall.get("whats_needs_attention") or [])
                             if isinstance(item, str) and item.strip()
                         ],
@@ -812,19 +796,8 @@ def _call_synthesis(
                         "whats_needs_attention": [],
                     }
 
-                overall_levers = [
-                    {
-                        "pillar": lv.get("pillar", ""),
-                        "improvement_hint": sanitize_llm_prose(str(lv.get("improvement_hint", ""))),
-                    }
-                    for lv in nonnull_list(parsed.get("overall_levers"))
-                    if isinstance(lv, dict)
-                ]
-
                 return {
                     "overall_summary": overall_summary,
-                    "overall_summary_short": short,
-                    "overall_levers": overall_levers,
                 }
 
             if attempt < max_attempts:
@@ -840,14 +813,14 @@ def _call_synthesis(
     )
 
 
-def run_pillar_split_summary(
+async def run_pillar_split_summary(
     data: dict,
     config: dict,
     unlocked_pillars: set[str],
     *,
     request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Run the pillar-split pipeline: parallel pillar calls -> merge -> synthesis call.
+    """Run the pillar-split pipeline: concurrent pillar calls -> merge -> synthesis call.
 
     Returns the same shaped dict as the monolithic ``run_pillar_summary``.
     Raises LLMValidationError or RuntimeError if any pillar or synthesis call fails.
@@ -866,27 +839,28 @@ def run_pillar_split_summary(
         pillar_order = ["spending", "borrowing", "protection", "tax", "wealth"]
         active_pillars = [p for p in pillar_order if p in unlocked_pillars]
 
-        # Phase 1: call each pillar prompt in parallel
+        # Phase 1: call each pillar prompt concurrently
         pillar_outputs: dict[str, dict] = {}
         errors: dict[str, Exception] = {}
 
-        with ThreadPoolExecutor(max_workers=min(len(active_pillars), 5)) as pool:
-            futures = {
-                pool.submit(
-                    _call_single_pillar,
-                    pillar,
-                    data,
-                    config,
-                    request_id=request_id,
-                ): pillar
-                for pillar in active_pillars
-            }
-            for future in as_completed(futures):
-                pillar = futures[future]
-                try:
-                    pillar_outputs[pillar] = future.result()
-                except Exception as exc:
-                    errors[pillar] = exc
+        async def _safe_call_pillar(pillar: str) -> tuple[str, dict | None, Exception | None]:
+            try:
+                result = await _call_single_pillar(
+                    pillar, data, config, request_id=request_id,
+                )
+                return pillar, result, None
+            except Exception as exc:
+                return pillar, None, exc
+
+        results = await asyncio.gather(
+            *(_safe_call_pillar(p) for p in active_pillars),
+        )
+
+        for pillar, result, exc in results:
+            if exc is not None:
+                errors[pillar] = exc
+            else:
+                pillar_outputs[pillar] = result  # type: ignore[assignment]
 
         if errors:
             first_pillar = sorted(errors)[0]
@@ -907,7 +881,7 @@ def run_pillar_split_summary(
         span.set_attribute("pillar_phase.ok", True)
 
         # Phase 2: call synthesis for overall_summary
-        synthesis = _call_synthesis(
+        synthesis = await _call_synthesis(
             data, config, pillar_outputs, request_id=request_id,
         )
 
@@ -929,6 +903,4 @@ def run_pillar_split_summary(
             "metric_summaries_ui": merged_metric_summaries_ui,
             "pillar_summaries": merged_pillar_summaries,
             "overall_summary": synthesis["overall_summary"],
-            "overall_summary_short": synthesis["overall_summary_short"],
-            "overall_levers": synthesis["overall_levers"],
         }

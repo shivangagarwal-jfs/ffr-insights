@@ -5,16 +5,16 @@ Reads each data/<persona>/input.json, POSTs it to the local summary endpoint,
 and writes the response to data/<persona>/output_summary.json.
 
 Usage:
-    python scripts/generate_summaries.py              # parallel (default 4 workers)
-    python scripts/generate_summaries.py --workers 8  # parallel with 8 workers
+    python scripts/generate_summaries.py              # concurrent (default 4 workers)
+    python scripts/generate_summaries.py --workers 8  # concurrent with 8 workers
     python scripts/generate_summaries.py --serial     # sequential, one at a time
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import httpx
@@ -27,7 +27,9 @@ TIMEOUT = 120.0
 DEFAULT_WORKERS = 4
 
 
-def generate_summary(persona_dir: Path) -> tuple[str, dict | None, float]:
+async def generate_summary(
+    client: httpx.AsyncClient, persona_dir: Path,
+) -> tuple[str, dict | None, float]:
     """POST input.json and return (tag, response_dict | None, elapsed_seconds)."""
     tag = persona_dir.name
     input_file = persona_dir / "input.json"
@@ -36,7 +38,7 @@ def generate_summary(persona_dir: Path) -> tuple[str, dict | None, float]:
 
     payload = json.loads(input_file.read_text())
     t0 = time.perf_counter()
-    resp = httpx.post(SUMMARY_ENDPOINT, json=payload, timeout=TIMEOUT)
+    resp = await client.post(SUMMARY_ENDPOINT, json=payload, timeout=TIMEOUT)
     resp.raise_for_status()
     elapsed = time.perf_counter() - t0
     return tag, resp.json(), elapsed
@@ -58,15 +60,15 @@ def _process_result(
     results["ok"].append(tag)
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser(description="Batch-generate persona summaries")
     parser.add_argument(
         "--workers", type=int, default=DEFAULT_WORKERS,
-        help=f"Max parallel requests (default {DEFAULT_WORKERS})",
+        help=f"Max concurrent requests (default {DEFAULT_WORKERS})",
     )
     parser.add_argument(
         "--serial", action="store_true",
-        help="Run sequentially instead of in parallel",
+        help="Run sequentially instead of concurrently",
     )
     args = parser.parse_args()
 
@@ -84,34 +86,40 @@ def main():
     results: dict[str, list[str]] = {"ok": [], "fail": []}
     wall_start = time.perf_counter()
 
-    if args.serial:
-        print("Mode: serial\n")
-        for persona_dir in persona_dirs:
-            tag = persona_dir.name
-            print(f"[{tag}] Generating summary …")
-            try:
-                tag, data, elapsed = generate_summary(persona_dir)
-                _process_result(persona_dir, tag, data, elapsed, results)
-            except Exception as exc:
-                print(f"[{tag}] FAIL — {exc}")
-                results["fail"].append(tag)
-    else:
-        workers = min(args.workers, n)
-        print(f"Mode: parallel ({workers} workers)\n")
-        dir_by_tag = {p.name: p for p in persona_dirs}
-
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {
-                pool.submit(generate_summary, pd): pd.name for pd in persona_dirs
-            }
-            for future in as_completed(futures):
-                tag = futures[future]
+    async with httpx.AsyncClient() as client:
+        if args.serial:
+            print("Mode: serial\n")
+            for persona_dir in persona_dirs:
+                tag = persona_dir.name
+                print(f"[{tag}] Generating summary …")
                 try:
-                    tag, data, elapsed = future.result()
-                    _process_result(dir_by_tag[tag], tag, data, elapsed, results)
+                    tag, data, elapsed = await generate_summary(client, persona_dir)
+                    _process_result(persona_dir, tag, data, elapsed, results)
                 except Exception as exc:
                     print(f"[{tag}] FAIL — {exc}")
                     results["fail"].append(tag)
+        else:
+            workers = min(args.workers, n)
+            print(f"Mode: concurrent ({workers} workers)\n")
+            semaphore = asyncio.Semaphore(workers)
+            dir_by_tag = {p.name: p for p in persona_dirs}
+
+            async def _limited(pd: Path) -> tuple[str, dict | None, float]:
+                async with semaphore:
+                    return await generate_summary(client, pd)
+
+            gathered = await asyncio.gather(
+                *(_limited(pd) for pd in persona_dirs),
+                return_exceptions=True,
+            )
+            for persona_dir, outcome in zip(persona_dirs, gathered):
+                tag = persona_dir.name
+                if isinstance(outcome, Exception):
+                    print(f"[{tag}] FAIL — {outcome}")
+                    results["fail"].append(tag)
+                else:
+                    tag, data, elapsed = outcome
+                    _process_result(dir_by_tag[tag], tag, data, elapsed, results)
 
     wall_elapsed = time.perf_counter() - wall_start
     print("\n--- Done ---")
@@ -121,4 +129,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

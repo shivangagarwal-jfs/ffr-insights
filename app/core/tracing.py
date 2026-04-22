@@ -18,7 +18,6 @@ import functools
 import os
 from typing import Any, Callable, TypeVar
 
-from opentelemetry import context as otel_context
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -92,20 +91,6 @@ def shutdown_tracing() -> None:
 
 def get_tracer(name: str | None = None) -> trace.Tracer:
     return trace.get_tracer(name or _TRACER_NAME)
-
-
-def current_otel_context() -> otel_context.Context:
-    """Snapshot the current OTel context (for cross-thread propagation)."""
-    return otel_context.get_current()
-
-
-def attach_context(ctx: otel_context.Context) -> object:
-    """Attach a previously captured context in the current thread."""
-    return otel_context.attach(ctx)
-
-
-def detach_context(token: object) -> None:
-    otel_context.detach(token)  # type: ignore[arg-type]
 
 
 def traced(
