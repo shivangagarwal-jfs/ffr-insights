@@ -682,7 +682,8 @@ async def _call_single_pillar(
                 max_attempts=max_attempts,
             )
 
-            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            pillar_budget = int(config.get("max_tokens_pillar", _DEFAULTS.get("max_tokens_pillar", 4096)))
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=pillar_budget)
 
             log_llm_output(
                 request_id=request_id,
@@ -766,7 +767,8 @@ async def _call_synthesis(
                 max_attempts=max_attempts,
             )
 
-            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            synthesis_budget = int(config.get("max_tokens_synthesis", _DEFAULTS.get("max_tokens_synthesis", 4096)))
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=synthesis_budget)
 
             log_llm_output(
                 request_id=request_id,

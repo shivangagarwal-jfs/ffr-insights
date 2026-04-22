@@ -335,26 +335,26 @@ class InsightFinboxFeatures(BaseModel):
     amt_nps_investment_c360: Optional[float] = Field(None, description="NPS investment amount, last 360 days.")
     cnt_nps_trx: Optional[int] = Field(None, description="Total NPS transaction count.")
     nps_flag: Optional[bool] = Field(None, description="NPS investment detected.")
-    nps_trx_recency: Optional[str] = Field(None, description="Recency of latest NPS transaction.")
+    nps_trx_recency: Optional[int] = Field(None, description="Recency of latest NPS transaction.")
     investment_balance_nps_latest: Optional[float] = Field(None, description="Latest NPS investment balance.")
     amt_ppf_investment_c90: Optional[float] = Field(None, description="PPF investment amount, last 90 days.")
     amt_ppf_investment_c180: Optional[float] = Field(None, description="PPF investment amount, last 180 days.")
     amt_ppf_investment_c360: Optional[float] = Field(None, description="PPF investment amount, last 360 days.")
     cnt_ppf_trx: Optional[int] = Field(None, description="Total PPF transaction count.")
     ppf_flag: Optional[bool] = Field(None, description="PPF investment detected.")
-    ppf_trx_recency: Optional[str] = Field(None, description="Recency of latest PPF transaction.")
+    ppf_trx_recency: Optional[int] = Field(None, description="Recency of latest PPF transaction.")
     investment_balance_ppf_latest: Optional[float] = Field(None, description="Latest PPF investment balance.")
 
     # ── EPF features ──
     epf_flag: Optional[bool] = Field(None, description="EPF contributions detected.")
-    epf_claim_recency: Optional[str] = Field(None, description="Recency of latest EPF claim.")
+    epf_claim_recency: Optional[int] = Field(None, description="Recency of latest EPF claim.")
     epf_credit_avg_3mo: Optional[float] = Field(None, description="Average EPF credit over 3 months.")
     epf_credit_avg_6mo: Optional[float] = Field(None, description="Average EPF credit over 6 months.")
     epf_credit_latest_6mo: Optional[float] = Field(None, description="Total EPF credit in latest 6 months.")
     epf_latest_balance: Optional[float] = Field(None, description="Latest EPF balance.")
     epf_latest_balance_date: Optional[str] = Field(None, description="Date of latest EPF balance.")
     epf_latest_claim_amt: Optional[float] = Field(None, description="Latest EPF claim amount.")
-    epf_vintage: Optional[str] = Field(None, description="EPF account vintage.")
+    epf_vintage: Optional[int] = Field(None, description="EPF account vintage.")
     epf_time: Optional[str] = Field(None, description="Timestamp of latest EPF data.")
 
     # ── Wealth: Mutual Funds ──
@@ -383,7 +383,7 @@ class InsightFinboxFeatures(BaseModel):
 
     # ── Wealth: Recurring Deposits ──
     rd_flag: Optional[bool] = Field(None, description="RD investment detected.")
-    rd_trx_recency: Optional[str] = Field(None, description="Recency of latest RD transaction.")
+    rd_trx_recency: Optional[int] = Field(None, description="Recency of latest RD transaction.")
     cnt_rd_trx: Optional[int] = Field(None, description="Total RD transaction count.")
     amt_rd_accounts_c180: Optional[float] = Field(None, description="RD account amounts, last 180 days.")
     investment_amt_rd: Optional[float] = Field(None, description="Total RD investment amount.")

@@ -7,8 +7,15 @@ temperature_summary: 0.3
 temperature_insights: 0.3
 
 # ── LLM retry & token budgets ────────────────────────────────────────────
-# Max output tokens for all Gemini calls
-max_output_tokens: 16384
+# Max output tokens — separate budgets per call type for faster responses.
+# monolithic summary (all pillars in one call):
+max_tokens_summary: 16384
+# per-pillar split call (single pillar JSON):
+max_tokens_pillar: 4096
+# synthesis call (overall_summary / levers):
+max_tokens_synthesis: 4096
+# per-theme insight call:
+max_tokens_insight: 2048
 max_validation_retries: 2
 
 # ── Gemini defaults (env vars override these when set) ──────────────────────

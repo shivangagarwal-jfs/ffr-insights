@@ -69,69 +69,25 @@ HARD FLOOR FOR EMI BURDEN TRENDS — N/A for this pillar.
  - 2.0x+: congratulate, then suggest reviewing more clearly: "Your emergency fund far exceeds the benchmark — reviewing how much to keep liquid versus redirecting to higher-return avenues could be beneficial."
  Keep the tone warm — this is NOT a criticism. Frame it as an opportunity to optimise, not a problem.
 
-METRIC_SUMMARIES_UI — SPEND_TO_INCOME_RATIO (volatility-aware, ACTIONABLE — MANDATORY):
-The spend_to_income_ratio metric_summaries_ui entry MUST reference the **amplitude and volatility** of income and spend, and the **income stability**. You MUST attribute the ratio behaviour to the income side, the spend side, or both.
-**WHEN RATIO IS <= 0.70 (Excellent or Healthy):** Lead with a positive implication — the user's spending leaves room for savings and goals. Frame volatility as context, not concern.
- GOOD (Excellent, stable): "With spending well within control, there's consistent room each month for savings and goals — a strong position to be in."
- GOOD (Healthy, trend improving): "Spending has been moving in the right direction — the current ratio leaves healthy room for savings each month."
- GOOD (Healthy, steady): "Well-managed spending leaves room for savings and goals each month — a good position to maintain."
-**WHEN RATIO IS > 0.70 (Stretched):** Use the volatility-aware framing below.
-**CRITICAL FRAMING RULE:** The user CANNOT control income — they CAN control expenses. When income volatility is a factor, mention it AT MOST as a brief subordinate clause, then SHIFT the headline to a **specific spend category** from the savings_dip_attribution or monthly_spend_breakdown. Do NOT make income volatility the headline or main takeaway — the headline must be about a concrete spend area.
-**TONE RULE — NO REDUCTION LANGUAGE:** NEVER tell the user to reduce, cut, trim, or tighten expenses. Always use **"review your spend"** or **"reviewing [category] spend"** as the call to action. The goal is observation, not prescription.
-**NAME A SPEND CATEGORY (MANDATORY when Stretched):** When the spend_to_income_ratio is Stretched, the metric_summaries_ui entry MUST name at least one **specific expense category** from savings_dip_attribution or monthly_spend_breakdown that contributes to the stretched ratio. Do NOT say just "reviewing your spend" — say "reviewing your **[category]** spend" using an actual category name from the data. If savings_dip_attribution lists expense categories, use the top one. If only monthly_spend_breakdown is available, pick the category with the highest absolute spend.
-- If income is Highly Variable but spend is relatively stable → briefly note income variability, then name the top spend category: "Some income variability tightens the ratio, but reviewing your food and commute spend could help keep it more comfortable."
-- If spend is volatile but income is stable → name the volatile categories: "Steady earnings but swings in shopping and entertainment push the ratio around — reviewing those categories could bring stability."
-- If both are volatile → acknowledge income briefly, name top spend category: "Income varies, and shopping spend adds pressure — reviewing that category is the most direct lever."
-- Reference the amplitude (₹ swing) to ground the claim — but prefer spend_amplitude when spend is also volatile. Use income_amplitude only as a gentle mention.
-- Do NOT paste CoV numbers or the stability label verbatim — translate into user-facing language.
- BAD (income as headline, user helpless): "With income swinging by nearly ₹6,400 month to month while spending is less volatile, lean months push the ratio deep into Stretched territory."
- BAD (no volatility attribution): "High spending relative to income leaves almost no room for savings, compounding the pressure on your critically low emergency cushion."
- BAD (generic, no category named): "Your spending is stretched, leaving little buffer in lean months."
- BAD (generic "review your spend" without naming a category): "Some income variability tightens the ratio in lean months — reviewing your spend could help keep it in a comfortable range."
- BAD (reduction language): "Trimming discretionary outflows where possible is the most direct lever." — NEVER say trim/cut/reduce.
- GOOD (income-driven, category named): "Some income variability tightens the ratio, but reviewing your food and commute spend could help keep it more comfortable."
- GOOD (spend-driven, categories named): "Steady earnings but swings in shopping and entertainment push the ratio around — reviewing those categories could bring stability."
- GOOD (both volatile, category named): "Income varies, and shopping spend adds pressure — reviewing that category is the most direct lever."
+METRIC_SUMMARIES_UI — SPEND_TO_INCOME_RATIO (volatility-aware, ACTIONABLE):
+- MUST reference amplitude/volatility of income and spend, and income stability. Attribute ratio behaviour to income, spend, or both.
+- ≤0.70 (Excellent/Healthy): Lead positive — spending leaves room for savings and goals. Frame volatility as context, not concern.
+- >0.70 (Stretched): MUST name a specific expense category from savings_dip_attribution or monthly_spend_breakdown.
+- CRITICAL: User CANNOT control income, CAN control expenses. Income volatility = brief subordinate clause at most; headline = specific spend category.
+- NO REDUCTION LANGUAGE: Never "reduce/cut/trim/tighten." Always "review your [category] spend."
+- Do NOT paste CoV numbers or stability labels — translate into user-facing language. Reference amplitude (₹ swing) to ground claims.
+- Income variable + spend stable → note income briefly, name top spend category. Spend volatile + income stable → name volatile categories. Both volatile → acknowledge income, name top spend category.
 
-METRIC_SUMMARIES_UI — SAVINGS_CONSISTENCY (causal implication, ACTIONABLE — MANDATORY):
-The saving_consistency metric_summaries_ui entry MUST name a **specific expense category** from **savings_dip_attribution** and frame it as a controllable lever. metric_summaries states *what* the cause is; metric_summaries_ui tells the user *which expense to look at*.
-**ABSOLUTE RULE — NAME A CATEGORY (HARD CONSTRAINT):** The savings_dip_attribution data includes a section labelled ">>> EXPENSE CATEGORIES TO NAME <<<". You MUST pick at least one category from that list and write it into the metric_summaries_ui entry by name (e.g. "shopping", "health", "food"). If you write a metric_summaries_ui entry for saving_consistency that does NOT contain a specific category name from the data, the output is INVALID.
-**CRITICAL FRAMING RULE:** The user CANNOT control income — they CAN control expenses. Even when `income_drop` is the dominant cause, the metric_summaries_ui entry must STILL name a specific expense category as the actionable lever. Income variability may appear as a brief mention (one clause max), but the **headline** must be the category name.
-**TONE RULE — NO REDUCTION LANGUAGE:** NEVER tell the user to reduce, cut, trim, tighten, or "build flexibility" in expenses. Always say **"review your spend"** or **"reviewing [category] spend"**. Keep sentences short, plain, and direct — avoid nested clauses and passive constructions.
-**USE `category_detail` FOR RICHER FRAMING:** When `category_detail` entries are present, use them to ground the recommendation:
-- `trend: "spike"` → frame as a one-off worth reviewing: "A one-time jump in shopping spend drove the miss — reviewing that category could help avoid a repeat."
-- `trend: "rising"` → frame as a **pattern** to review: "Shopping spend has been climbing over recent months — reviewing that trend could help restore consistency."
-- `trend: "stable_high"` → frame as a steady drag worth reviewing: "Food spend has stayed high across recent months — reviewing that category could free up room for savings."
-- When the top `category_detail` entry has `trend: "rising"`, it MUST be the headline lever — a sustained shift matters more than a one-off.
-EXAMPLES BY DOMINANT CAUSE (all examples include a named category):
-- `category_spike` dominant → "A rise in shopping spend drove most of the missed months — reviewing that category could restore consistency."
-- `overall_spend_rise` dominant → "Overall spend has crept up, led by food and commute — reviewing those categories could help bring consistency back."
-- `income_drop` dominant → "Income dips played a role, but reviewing your shopping and health spend could help maintain savings in leaner months."
-- Mixed causes → name the most frequent expense-side category and point to it.
-- MUST name specific expense categories when `category_spike` or `category_detail` data provides them — do NOT genericise to "discretionary outflows" or "periodic spending bursts" when you have the actual category name.
- BAD (repeats metric_summaries observation): "Income dips in several months are behind most of the missed savings months, resulting in inconsistency."
- BAD (income as headline, user helpless): "Unpredictable income makes it hard to save consistently, leaving little buffer to absorb lean months."
- BAD (generic, no specific category — INVALID): "Periodic spending bursts break the savings rhythm — reviewing discretionary outflows could help."
- BAD (generic "your spend" without naming a category — INVALID): "Some income variability played a role, but reviewing your spend in those months could help maintain savings."
- BAD (income-only framing — INVALID): "Income variability affects savings regularity — reviewing your spend during leaner months could help maintain a more regular habit."
- BAD (rising trend called one-off): "A one-time jump in shopping drove the miss — watch for impulse buys." (when category_detail shows trend="rising")
- BAD (reduction language): "Trimming that baseline could free up room for saving." — NEVER say trim/cut/reduce.
- BAD (complex language): "With some income variability, expenses didn't flex down — building flexibility would help maintain savings in leaner months."
- GOOD (category spike named): "A rise in shopping spend drove most of the missed months — reviewing that spend could help restore consistency."
- GOOD (rising trend): "Shopping spend has been climbing over recent months — reviewing that trend could help get savings back on track."
- GOOD (stable_high): "Food spend has stayed high across recent months — reviewing that category could free up room for savings."
- GOOD (overall spend rise, categories named): "Overall spend has crept up, led by food and commute — reviewing those categories could bring consistency back."
- GOOD (income-driven, pivots to named category): "Income dips played a role, but reviewing your shopping and health spend could help maintain savings in leaner months."
+METRIC_SUMMARIES_UI — SAVINGS_CONSISTENCY (causal implication, ACTIONABLE):
+- MUST name a specific expense category from savings_dip_attribution ">>> EXPENSE CATEGORIES TO NAME <<<" section. Output is INVALID without a named category.
+- Even when income_drop is dominant cause, STILL name a specific expense category as the actionable lever. Income = brief mention (one clause max), headline = category name.
+- NO REDUCTION LANGUAGE: Always "review your [category] spend." Keep sentences short, plain, direct.
+- Use category_detail trends: "spike" → one-off; "rising" → MUST frame as sustained pattern ("has been climbing"); "stable_high" → persistently elevated. When top entry is "rising," it MUST be headline lever.
 
-METRIC_SUMMARIES_UI — EMERGENCY_CORPUS (benchmark-relative, ACTIONABLE — MANDATORY):
-**WHEN RATIO < 1.0 (below benchmark):** Name the gap and frame as a goal to work toward using surplus or savings momentum.
- GOOD: "Emergency savings fall short of the benchmark — building this cushion is a priority for financial stability."
-**WHEN RATIO IS 1.0–1.5x (meets/comfortably above):** Congratulate — the user has built a solid cushion.
- GOOD: "A solid emergency cushion is in place — well done, this provides good protection against unexpected expenses."
-**WHEN RATIO IS >= 1.5x (well above / far exceeds):** Congratulate, then gently suggest reviewing whether so much needs to stay in low-yield emergency savings.
- GOOD: "Your emergency cushion is well above the benchmark — reviewing whether some of it could work harder in other avenues is worth considering."
- GOOD: "Emergency savings far exceed the benchmark — reviewing how much to keep liquid versus putting the rest to work could be a smart next step."
- BAD (prescriptive): "You should move the extra money into investments." — NEVER prescribe specific actions; say "review".
+METRIC_SUMMARIES_UI — EMERGENCY_CORPUS (benchmark-relative, ACTIONABLE):
+- <1.0x: Name the gap, frame as goal using surplus or savings momentum.
+- 1.0x–1.5x: Congratulate — solid cushion in place.
+- ≥1.5x: Congratulate, then gently suggest reviewing whether excess could work harder elsewhere. Never prescribe specific actions — say "review."
 
 PILLAR SUMMARY — SPENDING:
 - **STRETCHED SPEND RATIO + STRONG PILLAR SCORE (tension bridge):** When spend_to_income sits in Stretched but saving_consistency and/or emergency_corpus are strengths, the pillar summary must NOT call the whole pillar a "clear strength" without one explicit bridge sentence.

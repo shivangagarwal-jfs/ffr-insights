@@ -563,6 +563,22 @@ async def _llm_generate_insight(
     return None
 
 
+def _has_signal_data(payload: Dict[str, Any]) -> bool:
+    """Return True if the theme payload contains at least one non-trivial signal beyond metadata."""
+    for key, value in payload.items():
+        if key in ("customer_id", "decision_date"):
+            continue
+        if isinstance(value, dict):
+            if any(not _is_empty_value(v) for v in value.values()):
+                return True
+        elif isinstance(value, list):
+            if any(not _is_empty_value(item) for item in value):
+                return True
+        elif not _is_empty_value(value):
+            return True
+    return False
+
+
 async def _generate_single_insight(
     pillar: str,
     idx: int,
@@ -578,6 +594,15 @@ async def _generate_single_insight(
         attributes={"pillar": pillar, "theme_key": theme_key, "idx": idx},
     ) as span:
         theme_payload = _build_theme_payload(transformed, _resolve_theme_signal_groups(theme_cfg))
+
+        if not _has_signal_data(theme_payload):
+            span.add_event("skipped_no_signal_data")
+            log_insight_info(
+                "Skipping LLM call for pillar=%s theme=%s — no signal data in payload",
+                pillar, theme_key,
+            )
+            return None
+
         result = await _llm_generate_insight(
             pillar, theme_key, idx, theme_cfg, theme_payload, request_id=request_id,
         )
