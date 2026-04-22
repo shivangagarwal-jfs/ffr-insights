@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
 import re
-import threading
 from typing import Any
 
 from google import genai
@@ -35,7 +35,7 @@ _insight_system_cache: dict[str, str] = {}
 # ── Context-cache management ─────────────────────────────────────────────────
 
 _context_cache_map: dict[tuple[str, str], str] = {}
-_context_cache_lock = threading.Lock()
+_context_cache_lock = asyncio.Lock()
 
 def _resolve_max_output_tokens(config: dict) -> int:
     """Read max_output_tokens from config with a safe fallback."""
@@ -48,7 +48,7 @@ def _system_prompt_hash(system_msg: str) -> str:
     return hashlib.sha256(system_msg.encode("utf-8")).hexdigest()
 
 
-def _get_or_create_context_cache(
+async def _get_or_create_context_cache(
     client: genai.Client,
     model: str,
     system_msg: str,
@@ -65,11 +65,11 @@ def _get_or_create_context_cache(
 
     key = (model, _system_prompt_hash(system_msg))
 
-    with _context_cache_lock:
+    async with _context_cache_lock:
         cached_name = _context_cache_map.get(key)
         if cached_name:
             try:
-                client.caches.get(name=cached_name)
+                await asyncio.to_thread(client.caches.get, name=cached_name)
                 return cached_name
             except Exception:
                 _context_cache_map.pop(key, None)
@@ -79,7 +79,8 @@ def _get_or_create_context_cache(
         ttl += "s"
 
     try:
-        cached = client.caches.create(
+        cached = await asyncio.to_thread(
+            client.caches.create,
             model=model,
             config=genai_types.CreateCachedContentConfig(
                 system_instruction=system_msg,
@@ -87,7 +88,7 @@ def _get_or_create_context_cache(
                 ttl=ttl,
             ),
         )
-        with _context_cache_lock:
+        async with _context_cache_lock:
             _context_cache_map[key] = cached.name
         logger.info("Created context cache %s for model=%s (ttl=%s)", cached.name, model, ttl)
         return cached.name
@@ -451,7 +452,7 @@ def _temperature_from_config(config: dict, key: str, default: float) -> float:
         return default
 
 
-def _call_gemini(
+async def _call_gemini(
     system_msg: str,
     user_msg: str,
     config: dict,
@@ -481,7 +482,7 @@ def _call_gemini(
         },
     ) as span:
         client = _gemini_client(config)
-        cached_name = _get_or_create_context_cache(client, model, system_msg, config)
+        cached_name = await _get_or_create_context_cache(client, model, system_msg, config)
         span.set_attribute("llm.context_cache", bool(cached_name))
 
         if cached_name:
@@ -500,7 +501,8 @@ def _call_gemini(
             )
 
         try:
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=user_msg,
                 config=cfg,
@@ -523,7 +525,8 @@ def _call_gemini(
                     temperature=temp,
                     max_output_tokens=max_tokens,
                 )
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model=model,
                 contents=user_msg,
                 config=fallback_cfg,
@@ -552,7 +555,7 @@ def _call_gemini(
         return text
 
 
-def call_llm(
+async def call_llm(
     system_msg: str,
     user_msg: str,
     config: dict,
@@ -576,7 +579,7 @@ def call_llm(
         except (TypeError, ValueError):
             floor = _DEFAULTS["gemini_max_output_tokens"]
         max_tokens = max(max_tokens, floor)
-        return _call_gemini(system_msg, user_msg, config, max_tokens)
+        return await _call_gemini(system_msg, user_msg, config, max_tokens)
 
 
 # ── JSON parsing ─────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@ router = APIRouter(tags=["FFR"])
         },
     },
 )
-def generate_insight(request: InsightInputRequest) -> InsightOutputResponse:
+async def generate_insight(request: InsightInputRequest) -> InsightOutputResponse:
     """Generate per-pillar insight cards from derived features and transactional data."""
     tracer = get_tracer(__name__)
     request_id = request.metadata.request_id if request.metadata else None
@@ -74,7 +74,7 @@ def generate_insight(request: InsightInputRequest) -> InsightOutputResponse:
             )
 
         try:
-            insights = generate_insights(request, request_id=request_id)
+            insights = await generate_insights(request, request_id=request_id)
             return InsightOutputResponse(
                 metadata=build_insight_response_metadata(
                     customer_id=request.metadata.customer_id,

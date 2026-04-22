@@ -8,9 +8,9 @@ Supports two modes:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import statistics
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from app.config import _DEFAULTS, PILLAR_METRICS, _llm_debug_enabled
@@ -502,7 +502,7 @@ def _enrich_data(data: dict) -> None:
 # ── Monolithic pipeline ──────────────────────────────────────────────────────
 
 
-def run_pillar_summary(
+async def run_pillar_summary(
     data: dict,
     config: dict,
     unlocked_pillars: set[str],
@@ -559,7 +559,7 @@ def run_pillar_summary(
                     max_attempts=max_attempts,
                 )
 
-                raw_response = call_llm(system_msg, user_msg, config)
+                raw_response = await call_llm(system_msg, user_msg, config)
 
                 log_llm_output(
                     request_id=request_id,
@@ -649,7 +649,7 @@ def run_pillar_summary(
 # ── Pillar-split pipeline ────────────────────────────────────────────────────
 
 
-def _call_single_pillar(
+async def _call_single_pillar(
     pillar: str,
     data: dict,
     config: dict,
@@ -682,7 +682,7 @@ def _call_single_pillar(
                 max_attempts=max_attempts,
             )
 
-            raw_response = call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=4096)
 
             log_llm_output(
                 request_id=request_id,
@@ -733,7 +733,7 @@ def _call_single_pillar(
     )
 
 
-def _call_synthesis(
+async def _call_synthesis(
     data: dict,
     config: dict,
     pillar_outputs: dict[str, dict],
@@ -766,7 +766,7 @@ def _call_synthesis(
                 max_attempts=max_attempts,
             )
 
-            raw_response = call_llm(system_msg, user_msg, config, max_tokens_override=4096)
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=4096)
 
             log_llm_output(
                 request_id=request_id,
@@ -840,14 +840,14 @@ def _call_synthesis(
     )
 
 
-def run_pillar_split_summary(
+async def run_pillar_split_summary(
     data: dict,
     config: dict,
     unlocked_pillars: set[str],
     *,
     request_id: str | None = None,
 ) -> dict[str, Any]:
-    """Run the pillar-split pipeline: parallel pillar calls -> merge -> synthesis call.
+    """Run the pillar-split pipeline: concurrent pillar calls -> merge -> synthesis call.
 
     Returns the same shaped dict as the monolithic ``run_pillar_summary``.
     Raises LLMValidationError or RuntimeError if any pillar or synthesis call fails.
@@ -866,27 +866,28 @@ def run_pillar_split_summary(
         pillar_order = ["spending", "borrowing", "protection", "tax", "wealth"]
         active_pillars = [p for p in pillar_order if p in unlocked_pillars]
 
-        # Phase 1: call each pillar prompt in parallel
+        # Phase 1: call each pillar prompt concurrently
         pillar_outputs: dict[str, dict] = {}
         errors: dict[str, Exception] = {}
 
-        with ThreadPoolExecutor(max_workers=min(len(active_pillars), 5)) as pool:
-            futures = {
-                pool.submit(
-                    _call_single_pillar,
-                    pillar,
-                    data,
-                    config,
-                    request_id=request_id,
-                ): pillar
-                for pillar in active_pillars
-            }
-            for future in as_completed(futures):
-                pillar = futures[future]
-                try:
-                    pillar_outputs[pillar] = future.result()
-                except Exception as exc:
-                    errors[pillar] = exc
+        async def _safe_call_pillar(pillar: str) -> tuple[str, dict | None, Exception | None]:
+            try:
+                result = await _call_single_pillar(
+                    pillar, data, config, request_id=request_id,
+                )
+                return pillar, result, None
+            except Exception as exc:
+                return pillar, None, exc
+
+        results = await asyncio.gather(
+            *(_safe_call_pillar(p) for p in active_pillars),
+        )
+
+        for pillar, result, exc in results:
+            if exc is not None:
+                errors[pillar] = exc
+            else:
+                pillar_outputs[pillar] = result  # type: ignore[assignment]
 
         if errors:
             first_pillar = sorted(errors)[0]
@@ -907,7 +908,7 @@ def run_pillar_split_summary(
         span.set_attribute("pillar_phase.ok", True)
 
         # Phase 2: call synthesis for overall_summary
-        synthesis = _call_synthesis(
+        synthesis = await _call_synthesis(
             data, config, pillar_outputs, request_id=request_id,
         )
 

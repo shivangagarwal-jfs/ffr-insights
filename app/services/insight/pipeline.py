@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-import os
 import re
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Any, Dict, List, NotRequired, Optional, TypedDict
 
@@ -27,7 +25,7 @@ from app.core.logging import (
     log_llm_input,
     log_llm_output,
 )
-from app.core.tracing import attach_context, current_otel_context, detach_context, get_tracer
+from app.core.tracing import get_tracer
 from app.validation.post_llm import (
     deduplicate_pillar_insights,
     insight_quality_gate,
@@ -61,7 +59,7 @@ class ThemeDetails(TypedDict):
 
 
 _PILLAR_THEME_CACHE: Dict[str, Dict[str, ThemeDetails]] = {}
-_PILLAR_THEME_LOCK = threading.Lock()
+_PILLAR_THEME_LOCK = asyncio.Lock()
 
 _PILLAR_DEFAULT_CTA: Dict[str, Dict[str, str]] = {
     "spending": {"text": "Review your spends", "action": "spending"},
@@ -99,11 +97,11 @@ def _load_pillar_theme_config(pillar: str) -> Dict[str, ThemeDetails]:
     return themes
 
 
-def load_pillar_themes(pillar: str) -> Dict[str, ThemeDetails]:
-    """Return theme config for *pillar*, loading from YAML on first access (thread-safe)."""
+async def load_pillar_themes(pillar: str) -> Dict[str, ThemeDetails]:
+    """Return theme config for *pillar*, loading from YAML on first access."""
     if pillar in _PILLAR_THEME_CACHE:
         return _PILLAR_THEME_CACHE[pillar]
-    with _PILLAR_THEME_LOCK:
+    async with _PILLAR_THEME_LOCK:
         if pillar not in _PILLAR_THEME_CACHE:
             _PILLAR_THEME_CACHE[pillar] = _load_pillar_theme_config(pillar)
     return _PILLAR_THEME_CACHE[pillar]
@@ -434,7 +432,7 @@ def _is_insufficient_data_json(parsed: Dict[str, Any]) -> bool:
     return False
 
 
-def _llm_generate_insight(
+async def _llm_generate_insight(
     pillar: str,
     theme_key: str,
     idx: int,
@@ -477,13 +475,14 @@ def _llm_generate_insight(
                     theme_key=theme_key,
                 )
 
-                text = _call_gemini(
+                raw_text = await _call_gemini(
                     system_msg,
                     user_prompt,
                     cfg,
                     _resolve_max_output_tokens(cfg),
                     temperature=_temperature_from_config(cfg, "temperature_insights", 0.7),
-                ).strip()
+                )
+                text = raw_text.strip()
 
                 log_llm_output(
                     request_id=request_id,
@@ -564,7 +563,7 @@ def _llm_generate_insight(
     return None
 
 
-def _generate_single_insight(
+async def _generate_single_insight(
     pillar: str,
     idx: int,
     theme_key: str,
@@ -579,7 +578,7 @@ def _generate_single_insight(
         attributes={"pillar": pillar, "theme_key": theme_key, "idx": idx},
     ) as span:
         theme_payload = _build_theme_payload(transformed, _resolve_theme_signal_groups(theme_cfg))
-        result = _llm_generate_insight(
+        result = await _llm_generate_insight(
             pillar, theme_key, idx, theme_cfg, theme_payload, request_id=request_id,
         )
         if result is None:
@@ -588,59 +587,44 @@ def _generate_single_insight(
         return result
 
 
-_INSIGHT_MAX_WORKERS = int(os.environ.get("INSIGHT_MAX_WORKERS", "8"))
-
-
-def _generate_pillar_insights(
+async def _generate_pillar_insights(
     pillar: str,
     transformed: Dict[str, Any],
     *,
     request_id: str | None = None,
 ) -> List[InsightItem]:
-    """Generate insights for a single *pillar* — parallel LLM calls across its themes."""
+    """Generate insights for a single *pillar* — concurrent LLM calls across its themes."""
     tracer = get_tracer(__name__)
     with tracer.start_as_current_span(
         "_generate_pillar_insights",
         attributes={"pillar": pillar},
     ) as pillar_span:
-        themes = list(load_pillar_themes(pillar).items())
+        themes = list((await load_pillar_themes(pillar)).items())
         if not themes:
             log_insight_warning("No themes configured for pillar=%s; skipping", pillar)
             return []
 
         pillar_span.set_attribute("theme_count", len(themes))
 
-        # Capture OTel context so worker threads inherit the current trace
-        parent_ctx = current_otel_context()
-
-        def _worker(
-            p: str, idx: int, key: str, cfg: ThemeDetails,
-            trans: Dict[str, Any], *, rid: str | None,
-        ) -> Optional[InsightItem]:
-            token = attach_context(parent_ctx)
+        async def _safe_generate(
+            idx: int, key: str, cfg: ThemeDetails,
+        ) -> tuple[int, Optional[InsightItem]]:
             try:
-                return _generate_single_insight(p, idx, key, cfg, trans, request_id=rid)
-            finally:
-                detach_context(token)
+                item = await _generate_single_insight(
+                    pillar, idx, key, cfg, transformed, request_id=request_id,
+                )
+                return idx, item
+            except Exception:
+                log_insight_exception(
+                    "Concurrent insight generation failed for pillar=%s theme=%s", pillar, key,
+                )
+                return idx, None
 
-        results: Dict[int, Optional[InsightItem]] = {}
-        with ThreadPoolExecutor(max_workers=min(_INSIGHT_MAX_WORKERS, len(themes))) as pool:
-            futures = {
-                pool.submit(
-                    _worker, pillar, idx, key, cfg, transformed, rid=request_id,
-                ): idx
-                for idx, (key, cfg) in enumerate(themes, start=1)
-            }
-            for future in as_completed(futures):
-                idx = futures[future]
-                key, cfg = themes[idx - 1]
-                try:
-                    results[idx] = future.result()
-                except Exception:
-                    log_insight_exception(
-                        "Parallel insight generation failed for pillar=%s theme=%s", pillar, key,
-                    )
-                    results[idx] = None
+        gather_results = await asyncio.gather(
+            *(_safe_generate(idx, key, cfg) for idx, (key, cfg) in enumerate(themes, start=1)),
+        )
+
+        results: Dict[int, Optional[InsightItem]] = dict(gather_results)
 
         ordered: List[InsightItem] = [
             results[idx] for idx in range(1, len(themes) + 1)
@@ -692,12 +676,12 @@ def _generate_pillar_insights(
         return insights
 
 
-def generate_insights(
+async def generate_insights(
     request: InsightInputRequest,
     *,
     request_id: str | None = None,
 ) -> InsightGroups:
-    """Orchestrate parallel per-pillar, per-theme LLM insight generation."""
+    """Orchestrate concurrent per-pillar, per-theme LLM insight generation."""
     tracer = get_tracer(__name__)
     with tracer.start_as_current_span(
         "generate_insights",
@@ -723,12 +707,13 @@ def generate_insights(
             p: [] for p in ("spending", "borrowing", "protection", "wealth", "tax")
         }
 
-        for pillar in requested_pillars:
-            if pillar not in enabled_pillars:
-                continue
-            pillar_results[pillar] = _generate_pillar_insights(
-                pillar, transformed, request_id=request_id,
+        active = [p for p in requested_pillars if p in enabled_pillars]
+        if active:
+            pillar_insight_lists = await asyncio.gather(
+                *(_generate_pillar_insights(p, transformed, request_id=request_id) for p in active),
             )
+            for pillar, items in zip(active, pillar_insight_lists):
+                pillar_results[pillar] = items
 
         return InsightGroups(**pillar_results)
 
