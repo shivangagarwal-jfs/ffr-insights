@@ -1,0 +1,74 @@
+# ── System Prompt files ─────────────────────────────────────────────────────────────
+insight_system_prompt_file: "insight_system.txt"
+prompt_mode: "pillar_split"
+
+# ── LLM temperature ────────────────────────────────────────────
+temperature_summary: 0.3
+temperature_insights: 0.3
+
+# ── LLM retry & token budgets ────────────────────────────────────────────
+# Max output tokens for all Gemini calls
+max_output_tokens: 16384
+max_validation_retries: 2
+
+# ── Gemini defaults (env vars override these when set) ──────────────────────
+gemini_model: "gemini-2.5-flash"
+gemini_vertex_project: "aigateway"
+gemini_vertex_location: "global"
+gemini_http_api_version: "v1"
+
+# ── Context caching (system prompt caching) ──────────────────────────────────
+# Cache system prompts via Gemini's CachedContent API to reduce input-token
+# costs and latency on repeated calls.  Requires the model to support caching.
+# Override with env ENABLE_CONTEXT_CACHE ("1"/"true"/"yes") and CONTEXT_CACHE_TTL.
+enable_context_cache: true
+context_cache_ttl: "3600s"   # 1 hour; minimum 60s, maximum 7 days
+
+# ── Logging & debug ─────────────────────────────────────────────────────────
+llm_debug: false
+log_level: "INFO"
+log_max_body_chars: 500000
+# Log file settings (override with LOG_DIR, LOG_FILE, LOG_MAX_BYTES, LOG_BACKUP_COUNT env vars)
+log_dir: "logs"
+log_file: "app.log"
+log_max_bytes: 10485760        # 10 MB per file
+log_backup_count: 5            # keep up to 5 rotated files
+
+# ── Tracing (OpenTelemetry) ─────────────────────────────────────────────────
+tracing_enabled: true
+tracing_exporter: "otlp"        # "console" or "otlp"
+tracing_service_name: "ffr-api"
+otlp_endpoint: "http://localhost:4317"   # uncomment for OTLP
+
+# ── App metadata ────────────────────────────────────────────────────────────
+app_version: "1.0.0"
+
+# ── Enabled insight pillars ───────────────────────────────────────────────
+# Only these pillars will be computed by POST /insight.
+# Pillars requested but not in this list are silently skipped.
+# Set to an empty list [] to disable all insight generation.
+# Override with env ENABLED_INSIGHT_PILLARS (comma-separated, e.g. "spending,borrowing").
+enabled_insight_pillars:
+  - spending
+  # - borrowing
+  # - protection
+  # - tax
+  # - wealth
+
+# ── Insight generation thresholds ───────────────────────────────────────────
+insight_headline_min_words: 2
+insight_headline_max_words: 5
+insight_description_min_words: 10
+insight_description_max_words: 30
+insight_cta_min_words: 2
+insight_cta_max_words: 5
+
+# ── Insight post-LLM validation thresholds ─────────────────────────────────
+# Max character length for insight descriptions (overloaded check)
+insight_description_max_chars: 320
+# Max sentence count for insight descriptions (overloaded check)
+insight_description_max_sentences: 3
+# Amount grounding: relative tolerance for matching cited amounts to payload
+insight_grounding_tolerance: 0.02
+# Cross-insight dedup: word-overlap ratio threshold for headline similarity
+insight_dedup_headline_overlap: 0.80

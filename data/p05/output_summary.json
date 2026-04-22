@@ -1,0 +1,91 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111105",
+        "timestamp": "2026-04-20T15:13:35.262294+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "Your spending consistently outpaces your income, leaving little room for savings. Reviewing your grocery and food expenses could help improve this balance.",
+            "saving_consistency": "Past entertainment spending has been climbing over recent months, impacting your ability to save regularly. Reviewing this trend could restore consistency.",
+            "emergency_corpus": "Your current emergency savings are significantly below target, potentially leaving you unprepared for unexpected financial challenges or income disruptions.",
+            "emi_burden": "Maintaining a healthy loan load ensures you have more income available for savings and other financial goals.",
+            "credit_score": "A declining credit score could impact your ability to access favorable loan terms and interest rates in the future.",
+            "life_insurance": "Life cover falls well short of the recommended level, but your positive monthly surplus provides a clear path to gradually close this protection gap.",
+            "health_insurance": "Health cover falls significantly short of the recommended level, but your positive monthly surplus offers a way to address this gap.",
+            "tax_filing_status": "Not filing tax returns can lead to penalties and missed opportunities for claiming refunds or demonstrating financial credibility.",
+            "tax_savings": "A low tax optimization score means you are likely missing out on significant savings that could boost your overall financial health.",
+            "investment_rate": "A minimal investment rate means your wealth growth potential is significantly limited, making it harder to achieve long-term financial goals.",
+            "portfolio_diversification": "Diversifying across asset classes helps manage risk and capture growth opportunities, protecting your wealth from market fluctuations.",
+            "portfolio_overlap": "Without overlap data, potential redundancies in your funds might lead to unintended concentration risks and suboptimal returns."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Track your daily expenses to identify areas for better management.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Set up an auto-debit for savings to build a consistent habit.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Explore options to build your emergency fund for better security.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Explore options to reduce your loan principal further.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Review your credit report to understand and improve your score.",
+                "action": "jio://credit/improve"
+            },
+            "life_insurance": {
+                "text": "Explore options to increase your life insurance cover for better protection.",
+                "action": "jio://insurance/term"
+            },
+            "health_insurance": {
+                "text": "Review and enhance your health insurance cover to reduce potential medical costs.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "File your income tax return to ensure compliance and avoid penalties.",
+                "action": "jio://tax/file"
+            },
+            "tax_savings": {
+                "text": "Explore available tax-saving instruments to reduce your taxable income.",
+                "action": "jio://tax/80c"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to build wealth faster.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to optimize risk and returns.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Provide fund details to check for portfolio overlap.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayment load is healthy at 18% of income, providing a stable base. However, protection, tax compliance, and wealth creation need urgent attention for your family.",
+            "whats_going_well": [
+                "Your loan repayment commitments are well-managed, consuming only 18% of your income, indicating controlled debt usage.",
+                "Your investment portfolio shows diversification across various asset classes, which helps manage risk.",
+                "You show moderate savings regularity, meeting the consistency bar in 6 out of 12 months."
+            ],
+            "whats_needs_attention": [
+                "You are not currently filing income tax returns, a critical step for compliance and financial credibility.",
+                "Both your life and health insurance covers are significantly below recommended levels, leaving your family exposed.",
+                "Your investment commitment is minimal at 4.0% of income, significantly limiting wealth creation.",
+                "Your emergency cushion is very low at 2.0 months, leaving you vulnerable to unexpected expenses.",
+                "Your credit profile, though currently good, has been steadily declining and needs to be stabilized."
+            ]
+        }
+    }
+}

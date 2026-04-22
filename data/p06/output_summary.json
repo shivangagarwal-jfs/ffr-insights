@@ -1,0 +1,91 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111106",
+        "timestamp": "2026-04-20T15:13:43.145911+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "A healthy spend-to-income ratio ensures consistent room for savings and financial goals each month, providing a strong foundation for your finances.",
+            "saving_consistency": "Your consistent savings habit is a major strength, but reviewing your travel spend could help maintain this excellent regularity moving forward.",
+            "emergency_corpus": "Building your emergency cushion is a priority; it provides essential protection against unexpected financial shocks and income disruptions.",
+            "emi_burden": "Maintaining a low loan burden frees up more of your income for savings and investments, significantly enhancing your financial flexibility and growth potential.",
+            "credit_score": "A strong credit score near the Excellent tier can unlock better interest rates on future loans, potentially saving you substantial amounts over time.",
+            "life_insurance": "Well done — your life cover meets the recommended level, giving your household solid protection and financial peace of mind.",
+            "health_insurance": "Your health cover is above the recommended level, ensuring you are well-prepared for potential medical costs without financial strain.",
+            "tax_filing_status": "Consistently filing your taxes ensures compliance and helps maintain a clear financial record, which is crucial for future financial planning.",
+            "tax_savings": "With a tax optimization score of 2, there's significant potential to reduce your taxable income and boost your overall savings.",
+            "investment_rate": "A moderate investment rate builds wealth steadily over time, but increasing it further can accelerate your financial growth and future security.",
+            "portfolio_diversification": "Diversification spreads risk across different assets, protecting your wealth from market volatility and enhancing long-term stability.",
+            "portfolio_overlap": "Understanding fund overlap helps avoid unnecessary duplication, ensuring your investments are truly diversified and cost-efficient."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Track your spending to maintain this healthy ratio.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Set up auto-debit to save consistently each month.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Build your emergency fund for financial security.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Explore options to optimize or prepay any existing loans.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Review your credit report to identify areas for further improvement.",
+                "action": "jio://credit/improve"
+            },
+            "life_insurance": {
+                "text": "Review your current life cover details.",
+                "action": "jio://insurance/life"
+            },
+            "health_insurance": {
+                "text": "Explore options to enhance your health cover.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Review your past tax filings for accuracy and future planning.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore ELSS, PPF, and NPS to enhance your tax-saving investments.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to accelerate wealth creation.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to maintain optimal diversification.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Check for fund overlap to optimize your investment portfolio.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your protection is strong, with life cover at 1.15 times the recommended level. Building your emergency cushion and optimizing tax savings are key areas to focus on.",
+            "whats_going_well": [
+                "Your life and health insurance covers are robust, exceeding recommended levels for your household.",
+                "Your loan repayment load is very low at 12% of income, providing significant financial flexibility.",
+                "You maintain a healthy spend-to-income ratio of 57%, demonstrating consistent expense control.",
+                "Your investment portfolio is well-diversified across asset classes, managing risk effectively."
+            ],
+            "whats_needs_attention": [
+                "Your emergency cushion covers only 4.8 months of expenses, leaving you vulnerable to unexpected events.",
+                "There is significant opportunity to improve your tax optimization, as you currently utilize only 2 out of 5 avenues.",
+                "While moderate, increasing your 19% investment commitment could accelerate your long-term wealth creation.",
+                "Though strong, further enhancing your credit profile can unlock even better terms for future borrowing needs."
+            ]
+        }
+    }
+}

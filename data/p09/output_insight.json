@@ -1,0 +1,73 @@
+{
+  "metadata": {
+      "customer_id": "CUST-DEMO-PERSONA-P09-001",
+      "request_id": "b3e1f7a2-4444-4bbb-9999-111111111109",
+      "timestamp": "2026-04-16T08:15:02.420491",
+      "version": "0.1"
+  },
+  "error": null,
+  "data": {
+          "spending": [
+              {
+                  "id": "spending_01",
+                  "theme": "overall_spends",
+                  "headline": "Maintain Spending Stability",
+                  "description": "Your average monthly spending of INR 406,333 over the last three months (Jan-Mar) shows remarkable stability, just 1.4% lower than December's INR 412,000.",
+                  "cta": "Continue stable habits"
+              },
+              {
+                  "id": "spending_02",
+                  "theme": "category_spends",
+                  "headline": "Manage Discretionary Spends",
+                  "description": "Your average monthly discretionary spending has increased by INR 63,000 in the last three months compared to the prior three months, with Shopping and Food as key contributors.",
+                  "cta": "Review discretionary budget"
+              },
+              {
+                  "id": "spending_03",
+                  "theme": "merchant_spends",
+                  "headline": "Focus Travel Spends",
+                  "description": "Your travel and accommodation spending concentrated at MakeMyTrip and Marriott Hotels, totaling INR 45,000, represented 11% of your total spending from just two transactions.",
+                  "cta": "Review travel budget"
+              },
+              {
+                  "id": "spending_04",
+                  "theme": "periodic_spike",
+                  "headline": "Manage Festival Spends",
+                  "description": "Your recent festival spending has increased compared to your average over the last six months. This could signal a growing concentration of your outlays during festive periods.",
+                  "cta": "Plan for festive spending."
+              },
+              {
+                  "id": "spending_05",
+                  "theme": "subscription_features",
+                  "headline": "Review Subscriptions",
+                  "description": "Your 5 subscriptions, totaling INR 24,600 last year, are all flagged as redundant across streaming, music, and productivity. Review their usage.",
+                  "cta": "Review subscription usage"
+              },
+              {
+                  "id": "spending_06",
+                  "theme": "liquidity_overview",
+                  "headline": "Diversify Liquid Savings",
+                  "description": "Your liquid investments total INR 690,000, with 63% concentrated in mutual funds. Diversifying can enhance your financial resilience.",
+                  "cta": "Review investment mix"
+              },
+              {
+                  "id": "spending_07",
+                  "theme": "spend_type_channel",
+                  "headline": "Lower UPI Activity",
+                  "description": "Last month, your average UPI debit ticket size was INR 2,500, down 11% from your three-month average of INR 2,800. Your UPI transaction frequency also declined by 17%.",
+                  "cta": "Track UPI spends"
+              },
+              {
+                  "id": "spending_08",
+                  "theme": "bill_payments",
+                  "headline": "Maintain Payment Discipline",
+                  "description": "You've paid all your phone and electricity bills on time for the last three months (Dec-Feb). Your phone bills were highly consistent, averaging INR 1,018.",
+                  "cta": "Continue timely payments."
+              }
+          ],
+          "borrowing": [],
+          "protection": [],
+          "wealth": [],
+          "tax": []
+      }
+  }

@@ -1,0 +1,123 @@
+investment_momentum:
+  prompt: >
+    Use monthly_investment and investment_rate to identify one insight on investment
+    momentum. Compare the latest monthly investment amount and investment rate against
+    earlier values in the series. Quantify the change in INR and as a percentage of
+    income. Describe whether the user is accelerating, maintaining, or slowing their
+    investment pace. Avoid generic statements; use actual month-level comparisons.
+  data:
+    - monthly_investment
+    - investment_rate
+
+portfolio_diversification_review:
+  prompt: >
+    Use portfolio_diversification to generate one insight on the user's asset allocation.
+    Identify which asset class has the highest allocation and whether the portfolio is
+    concentrated or well-spread. Quantify the top 2-3 allocations by percentage. If one
+    asset class dominates (>50%), highlight the concentration. Do not recommend specific
+    rebalancing; only describe the current allocation factually.
+  data:
+    - portfolio_diversification
+
+investment_consistency:
+  prompt: >
+    Use monthly_investment to assess the consistency of the user's investment behavior
+    over the available series. Compare the highest and lowest investment months and
+    quantify the variation in INR. Describe whether investments are regular, sporadic,
+    or trending in a direction. If the series is short, state that limited history
+    constrains the assessment.
+  data:
+    - monthly_investment
+
+mf_activity_overview:
+  prompt: >
+    Use wealth_features.mf to generate one insight on mutual fund activity. Check mf_flag
+    and mf_flag_c* to determine if there is recent MF activity. Use cnt_mf_trx and
+    cnt_mf_trx_m1 through m6 to assess transaction frequency — consistent monthly
+    transactions suggest SIP discipline, while sporadic or declining counts suggest
+    ad-hoc behavior. Quantify amt_mf_portfolio and investment_balance_mf_latest to
+    describe the corpus size. If amt_liq_mf_accounts data is available, note the
+    proportion in liquid funds vs overall. If mf_flag is false, state that no mutual
+    fund activity was detected.
+  data:
+    - wealth_features.mf
+
+mf_growth_trend:
+  prompt: >
+    Use wealth_features.mf to generate one insight on MF investment growth over time.
+    Compare amt_liq_mf_accounts across monthly windows (m0 through m6) and cumulative
+    windows (c90 vs c360) to detect whether the user's MF corpus is growing, stable,
+    or declining. Use cnt_liq_mf_accounts similarly to detect if the number of active
+    MF accounts is expanding. Quantify amounts in INR. If all values are zero, state
+    that no MF growth trajectory is available.
+  data:
+    - wealth_features.mf
+
+fd_position:
+  prompt: >
+    Use wealth_features.fd to generate one insight on the user's fixed deposit position.
+    Check fd_flag and cnt_fd_accounts for presence. Use investment_balance_fd_latest and
+    amt_fd_accounts_c180 to describe the current FD corpus. Compare amt_short_term_fd_accounts
+    across months (m0-m6) to detect if FDs are being opened, renewed, or withdrawn. Use
+    cnt_short_term_fd_accounts similarly for count trends. If fd_trx_recency is high
+    (>180 days), note that FD activity appears dormant. If fd_flag is false, state that
+    no FD activity was detected.
+  data:
+    - wealth_features.fd
+
+sip_discipline:
+  prompt: >
+    Use wealth_features.sip to generate one insight on SIP (Systematic Investment Plan)
+    discipline. Check sip_flag and sip_flag_c* across windows to determine whether SIP
+    activity is current or lapsed. Use cnt_sip_trx and cnt_sip_accounts_c* to quantify
+    the number of SIPs and their persistence across time. Use sip_trx_recency to assess
+    how recently the last SIP executed. If salaried_wo_mf_sip_flag is true in recent
+    windows, highlight that the user is a salaried individual without active SIP/MF
+    investments — a potential wealth-building gap. If sip_flag is false, state that no
+    SIP activity was detected.
+  data:
+    - wealth_features.sip
+
+rd_savings_behavior:
+  prompt: >
+    Use wealth_features.rd to generate one insight on recurring deposit behavior.
+    Check rd_flag for detection. Use cnt_rd_trx and amt_rd_accounts_c180 to assess
+    activity level and corpus. Use investment_balance_rd_latest for current balance.
+    If rd_trx_recency is low (recent), describe active RD savings. If recency is high
+    or rd_flag is false, state that no active RD behavior was detected. Compare RD
+    presence against MF/SIP activity — if user has RDs but no MF/SIP, note the
+    preference for guaranteed-return instruments.
+  data:
+    - wealth_features.rd
+    - wealth_features.sip
+    - wealth_features.mf
+
+maturity_pipeline:
+  prompt: >
+    Use wealth_features.maturity (cnt_fd_rd_mf_maturity_c30 through c360) to generate
+    one insight on upcoming investment maturities. If counts are non-zero in near-term
+    windows (c30, c60, c90), the user has instruments maturing soon — describe how many
+    and in which timeframe. This represents upcoming liquidity events or reinvestment
+    decisions. If c30 count is >0, emphasize the immediacy. If only c360 has counts,
+    note that maturities are in the medium-term horizon. If all counts are zero, state
+    that no upcoming maturities were detected.
+  data:
+    - wealth_features.maturity
+
+wealth_instrument_mix:
+  prompt: >
+    Use wealth_features.mf, wealth_features.fd, wealth_features.sip, and
+    wealth_features.rd together to generate one holistic insight on the user's
+    investment instrument mix. Identify which instruments are active (flag = true) and
+    which are absent. Compare balances across instruments (investment_balance_mf_latest,
+    investment_balance_fd_latest, investment_balance_sip_latest, investment_balance_rd_latest)
+    to show the distribution. If the user relies exclusively on one instrument type
+    (e.g., only FDs, no MFs), note the concentration. If multiple instruments are active,
+    describe the breadth. Do not recommend switching instruments; only describe the
+    factual position.
+  data:
+    - wealth_features.mf
+    - wealth_features.fd
+    - wealth_features.sip
+    - wealth_features.rd
+    - portfolio_diversification

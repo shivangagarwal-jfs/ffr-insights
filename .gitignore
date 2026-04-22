@@ -1,0 +1,13 @@
+.env
+Excels
+finbox_llm_insights.ipynb
+__pycache__
+.DS_Store
+merged_apis_changed_code.py
+helper_changed_code.py 
+output_validator_copy.py
+*.pptx
+*.xlsx
+*.pdf
+*.png
+logs/

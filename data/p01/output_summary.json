@@ -1,0 +1,91 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111101",
+        "timestamp": "2026-04-20T15:13:40.786361+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "Highly variable income combined with high spending, especially in food and grocery, leaves minimal room for savings. Reviewing these categories is crucial.",
+            "saving_consistency": "Inconsistent savings hinder financial progress. Reviewing shopping spend, which frequently spikes, could significantly improve your ability to save regularly.",
+            "emergency_corpus": "An insufficient emergency cushion leaves you vulnerable to unexpected expenses, potentially forcing reliance on credit. Building this fund is a critical priority.",
+            "emi_burden": "A healthy loan repayment load frees up income for savings and other financial goals. This provides crucial flexibility in your monthly budget.",
+            "credit_score": "A declining credit score can make it harder to access loans or credit cards with favorable terms. Improving it unlocks better financial opportunities.",
+            "life_insurance": "Your life cover is critically low for your household, but your ₹900 monthly surplus offers a path to gradually increase this essential protection.",
+            "health_insurance": "Your health cover is significantly below the recommended level, but your ₹900 monthly surplus can help bridge this important protection gap.",
+            "tax_filing_status": "Not filing taxes means you might be missing out on refunds or future financial benefits, impacting your overall financial standing.",
+            "tax_savings": "A low tax optimization score suggests you are likely paying more tax than necessary, reducing your available funds for savings or investments.",
+            "investment_rate": "A minimal investment rate means your wealth growth potential is significantly limited, making it harder to achieve future financial goals.",
+            "portfolio_diversification": "Concentrating most of your investments in FDs might limit growth and expose you to inflation risk over the long term.",
+            "portfolio_overlap": "Without fund overlap data, it's difficult to assess if your investments are efficiently spread or if there's unnecessary duplication."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Track your daily expenses to identify areas for improvement.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Set up auto-debit for savings to build a consistent habit.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Start building your emergency fund to secure your financial future.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Explore options to prepay or consolidate existing loans to reduce burden.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Review your credit report and take steps to improve your credit profile.",
+                "action": "jio://credit/improve"
+            },
+            "life_insurance": {
+                "text": "Increase your life cover to better protect your family's financial future.",
+                "action": "jio://insurance/term"
+            },
+            "health_insurance": {
+                "text": "Explore health insurance options to secure your family's medical needs.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "File your Income Tax Return to claim benefits.",
+                "action": "jio://tax/file"
+            },
+            "tax_savings": {
+                "text": "Explore tax-saving options like ELSS or PPF.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to boost your wealth accumulation.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Explore diversifying your portfolio to balance risk and potential returns.",
+                "action": "jio://invest/diversify"
+            },
+            "portfolio_overlap": {
+                "text": "Provide fund details to check for potential overlap and optimize holdings.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayment load is healthy at 19% of income, providing a stable base. However, significant gaps exist in protection, tax compliance, and wealth building.",
+            "whats_going_well": [
+                "Your loan repayment load is currently healthy at 19% of your income, indicating controlled debt usage.",
+                "Your monthly income allows for ₹900 to be set aside, offering a crucial starting point for savings."
+            ],
+            "whats_needs_attention": [
+                "Your tax compliance is unaddressed, with no filing and zero tax optimization, leading to missed benefits.",
+                "Life and health cover are critically low, leaving your household significantly exposed to unforeseen events.",
+                "Your investment commitment is minimal at 3.0% of income, limiting your long-term wealth building potential.",
+                "High spending at 92% of income and inconsistent savings hinder your ability to build a safety net.",
+                "Your emergency cushion is very low at 0.9 months, making you vulnerable to unexpected expenses.",
+                "Your credit profile is declining and needs improvement to access better financial products in the future."
+            ]
+        }
+    }
+}

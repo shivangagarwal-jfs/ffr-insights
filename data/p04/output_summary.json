@@ -1,0 +1,92 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111104",
+        "timestamp": "2026-04-20T15:13:29.741897+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "Income is stable, but high spending, particularly on rental and food, leaves minimal room for savings and financial goals.",
+            "saving_consistency": "Inconsistent savings, driven by health and shopping spikes, makes building financial reserves challenging, impacting your financial predictability.",
+            "emergency_corpus": "Your emergency cushion is significantly low, leaving you vulnerable to unexpected expenses without adequate financial protection.",
+            "emi_burden": "Maintaining a healthy loan repayment load ensures financial flexibility and reduces stress, allowing you to focus on other financial goals.",
+            "credit_score": "A declining credit score can limit access to favorable loan terms and impact future borrowing opportunities significantly.",
+            "life_insurance": "Life cover falls significantly short of the recommended level, but your positive monthly surplus provides a clear path to gradually close this protection gap.",
+            "health_insurance": "Health cover is critically low, yet your available monthly surplus offers a way to steadily increase your protection to the recommended level.",
+            "tax_filing_status": "Regular tax filing ensures compliance and builds a strong financial history, which is essential for future financial applications and stability.",
+            "tax_savings": "A low tax optimization score means you might be paying more tax than necessary, missing opportunities to save and grow your wealth.",
+            "investment_rate": "A minimal investment rate significantly slows your wealth accumulation, making it challenging to achieve long-term financial goals and secure your future.",
+            "portfolio_diversification": "While diversified, your current asset allocation may not be optimally aligned with your long-term growth objectives, potentially limiting overall returns.",
+            "portfolio_overlap": "Without fund-level overlap data, you might unknowingly hold redundant investments, which can dilute diversification benefits and increase costs."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Review your rental and food expenses to create more saving room.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Track your health and shopping expenses to improve savings consistency.",
+                "action": "jio://spend/track"
+            },
+            "emergency_corpus": {
+                "text": "Build your emergency fund to cover three to six months of expenses.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Review your current loans to ensure optimal terms and repayment schedules.",
+                "action": "jio://loans/consolidate"
+            },
+            "credit_score": {
+                "text": "Check your credit report to understand factors affecting your score.",
+                "action": "jio://credit/report"
+            },
+            "life_insurance": {
+                "text": "Increase your life cover to protect your financial future.",
+                "action": "jio://insurance/life"
+            },
+            "health_insurance": {
+                "text": "Enhance your health cover for better financial security.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Review your latest Income Tax Return for accuracy and potential deductions.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore tax-saving instruments like ELSS and PPF to reduce your taxable income.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to build future wealth.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to align with your financial goals.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Check for fund overlaps to optimize your investment portfolio.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayment load is healthy at 19% of income, providing a stable base. However, significant gaps exist across protection, spending, wealth building, and tax efficiency.",
+            "whats_going_well": [
+                "Your loan repayment load is healthy at 19% of income, indicating controlled debt usage.",
+                "You consistently file your taxes, which is crucial for financial compliance and record-keeping.",
+                "Your investment portfolio shows initial diversification across various asset classes, providing a foundational mix."
+            ],
+            "whats_needs_attention": [
+                "Your life and health insurance covers are critically low, leaving your financial security vulnerable.",
+                "High spending at 88% of income leaves minimal room for savings and financial goal achievement.",
+                "Your emergency cushion is very low at 0.6 months, limiting your ability to handle unexpected expenses.",
+                "Your investment commitment is minimal at 3.0%, significantly slowing your long-term wealth accumulation.",
+                "Your credit profile has been declining, now needing work, which could impact future borrowing terms.",
+                "Your tax optimization is low, indicating missed opportunities to reduce taxable income and save more."
+            ]
+        }
+    }
+}

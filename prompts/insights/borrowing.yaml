@@ -1,0 +1,168 @@
+emi_pressure:
+  prompt: >
+    Use emi_burden, monthly_emi, and total_emi to identify one insight on EMI repayment pressure.
+    Compare the latest EMI burden ratio against the series trend across recent months. Quantify how
+    much of monthly income goes toward EMI repayments and whether the burden is rising, stable, or
+    declining. Use total_emi (total_emi_loan_all_acc_m* and cumulative windows) to ground the
+    absolute EMI amount in INR. Highlight the practical implication on disposable income and financial
+    flexibility. If emi_burden exceeds 0.40 (40% of income), flag it as high-stress; if below 0.20,
+    acknowledge comfort. Do not invent data; use only values present. Avoid generic statements;
+    use actual month-level data.
+  data:
+    - emi_burden
+    - monthly_emi
+    - total_emi
+
+emi_composition:
+  prompt: >
+    Use emi_by_type and total_emi to generate one insight on how the user's EMI obligation is
+    distributed across loan types. Identify the top 1-2 loan types (e.g. home_loan, vehicle_loan,
+    credit_card, pay_later, business_loan) that dominate monthly EMI outflow. Compare
+    aggregate_emi_m1_m3 across types to quantify concentration. If one type accounts for more than
+    60% of total EMI, highlight concentration risk. If EMI is spread across many small types, note
+    the diversification. Compare recent (m1_m3) vs older (m4_m6) periods to detect whether the
+    mix is shifting — for example, growing pay-later or credit-card EMIs may signal increasing
+    reliance on short-term borrowing. Quantify in INR where possible.
+  data:
+    - emi_by_type
+    - total_emi
+
+loan_portfolio_health:
+  prompt: >
+    Use loan_profile and loan_disbursement to assess the health of the user's active loan portfolio.
+    From loan_profile, count the number of active loan accounts, identify distinct lenders, and note
+    loan types present (e.g. two_wheeler_loan, home_loan). Highlight lender concentration — if most
+    loans are with a single lender, note the dependency. From loan_disbursement, use
+    cnt_active_loan_accounts_m1 and cnt_active_loan_disbursed_gt_100k to quantify portfolio size.
+    If the user has more than 5 active loan accounts, flag complexity and tracking risk. If only 1-2
+    accounts exist, describe the portfolio as manageable. Produce one actionable insight about
+    portfolio structure, not just a list.
+  data:
+    - loan_profile
+    - loan_disbursement
+
+delinquency_risk:
+  prompt: >
+    Use delinquency and loan_profile to assess repayment discipline and delinquency risk.
+    Focus on cnt_delinquncy_loan_c90 and cnt_delinquncy_loan_c180 to identify how many missed
+    payments have occurred in recent windows. Quantify the delinquency amount using
+    amt_delinquncy_loan_c90 and amt_delinquncy_loan_c180 in INR. From loan_profile, identify
+    which specific accounts have max_dpd > 0 or cnt_delinquncy_acc > 0, and name the lender.
+    If delinquency count is zero across all windows, explicitly state that repayment discipline
+    is strong. If delinquency is rising (c180 > c90), highlight the worsening trend. Frame the
+    insight around financial risk, not judgment — quantify and describe trajectory.
+  data:
+    - delinquency
+    - loan_profile
+
+credit_score_trend:
+  prompt: >
+    Use credit_score to identify one insight on the user's credit score trajectory.
+    Compare the earliest and latest credit scores in the series and quantify the change
+    in points. Describe whether the score is improving, stable, or declining and what band
+    the user currently falls in (750+ is excellent, 700-749 is good, 650-699 needs attention,
+    below 650 is concerning). If the score improved by more than 20 points, highlight the
+    positive momentum. If it dropped, connect to possible causes like missed payments or
+    high utilization (without speculating beyond data). Do not invent scores; use only
+    values present in the data. If fewer than 2 data points exist, state that trend
+    assessment is not possible.
+  data:
+    - credit_score
+
+credit_card_spending:
+  prompt: >
+    Use cc_features to generate one insight on credit card transaction behavior.
+    Focus on amt_cc_txn_m0 through amt_cc_txn_m6 to identify the monthly CC spend trend.
+    Quantify whether CC spending is rising, stable, or declining in recent months vs older months.
+    Use amt_credit_card_reversal_m* to assess whether reversals are frequent — high reversals
+    relative to spending may indicate disputes, returns, or failed transactions.
+    Quantify the amounts in INR and describe the pattern. If CC transaction amounts are null or
+    zero across all months, explicitly state that the user does not appear to use credit cards
+    for spending.
+  data:
+    - cc_features
+
+credit_card_discipline:
+  prompt: >
+    Use cc_features and delinquency to assess credit card payment discipline.
+    From cc_features, check cc_payment_due_alerts_flag_c* and cc_payment_completed_alerts_flag_c*
+    to identify whether the user receives due reminders and completes payments. Use cc_bill_m0 and
+    cc_bill_m1 to compare recent bill amounts. From delinquency, use cnt_delinquncy_cc_c* and
+    amt_delinquncy_cc_c* to quantify any CC payment misses. If CC delinquency is zero and payment
+    completion flags are true, describe discipline as strong. If overdue amounts exist, quantify
+    them and describe the trend. If all CC fields are null or zero, state that credit card
+    activity is not detectable in the data.
+  data:
+    - cc_features
+    - delinquency
+
+credit_utilization:
+  prompt: >
+    Use cc_features to generate one insight on credit utilization.
+    Focus on cc_utilisation — this is a ratio indicating how much of the available credit limit
+    the user is consuming. If cc_utilisation exceeds 0.70 (70%), flag high utilization which
+    typically impacts credit score negatively and signals potential credit stress. If between
+    0.30 and 0.70, describe as moderate. Below 0.30 is healthy. Combine with amt_cc_txn_m0
+    and cc_bill_m0 to contextualize the spending volume driving utilization. If cc_utilisation
+    is null, state that utilization data is not available. Frame the insight as a factual
+    observation; do not recommend specific credit limit changes.
+  data:
+    - cc_features
+
+new_borrowing_activity:
+  prompt: >
+    Use loan_disbursement and loan_flags to identify one insight on recent borrowing activity.
+    From loan_disbursement, check amt_loan_disbursement_m1 through m6 and cumulative windows
+    (c30, c90, c180) to quantify any new loans taken recently. Use cnt_loan_disbursed_last_6mo
+    to count new loans. From loan_flags, check loan_applications_flag_c30/c90 to detect recent
+    applications and loan_approval_sms_flag_c*_v2 for approvals. If recent disbursements exist,
+    quantify the amount in INR and note whether borrowing is accelerating compared to older periods.
+    If no new borrowing is detected in c90 or c180, explicitly state that the user has not taken
+    new loans recently. Highlight loan_disbursed_same_client_flag if repeat borrowing from the
+    same source is detected.
+  data:
+    - loan_disbursement
+    - loan_flags
+
+repayment_automation:
+  prompt: >
+    Use loan_flags and loan_profile to assess the extent of repayment automation.
+    From loan_flags, count how many loan accounts have loan_acc*_autodebitflag set to true
+    versus false. From loan_profile, count total active loan accounts for context. If all or
+    most accounts have auto-debit enabled, describe repayment infrastructure as robust — auto-debit
+    reduces the risk of accidental missed payments. If fewer than half the accounts use auto-debit,
+    flag the gap and the associated risk of manual payment misses. Quantify the coverage ratio
+    (e.g., 3 of 5 accounts on auto-debit). If auto-debit data is not available, state so.
+  data:
+    - loan_flags
+    - loan_profile
+
+pay_later_exposure:
+  prompt: >
+    Use emi_by_type to identify one insight on the user's exposure to buy-now-pay-later (BNPL)
+    and pay-later products. Focus on the pay_later and credit_line loan types within emi_by_type.
+    Compare emi_m0 and aggregate_emi_m1_m3 to detect whether BNPL EMI obligations are growing,
+    stable, or declining. If pay-later EMIs are rising faster than other loan types, highlight
+    this as increasing short-term borrowing dependency. If pay_later EMI is zero or absent,
+    explicitly state that the user does not appear to have pay-later exposure. Also note emi_card
+    type if present, as it indicates EMI conversion on purchases. Quantify amounts in INR
+    where possible.
+  data:
+    - emi_by_type
+
+debt_to_income_trajectory:
+  prompt: >
+    Use emi_burden, monthly_emi, and income_features to generate one insight on the user's
+    long-term debt-to-income leverage trajectory. Compare the emi_burden ratio across the
+    available monthly series to determine if leverage is increasing, stable, or decreasing.
+    Use monthly_emi to ground the absolute EMI amounts in INR, and income_features
+    (calculated_income_amount_v4) to anchor the income baseline. If emi_burden is trending
+    upward while income is flat, highlight structural leverage risk. If both EMI and income
+    are growing but burden is stable, describe balanced scaling. If emi_burden is declining,
+    describe deleveraging. Quantify the earliest and latest burden ratios and the income
+    baseline. Do not repeat the emi_pressure insight — focus on the multi-month trajectory
+    relative to income growth, not the current-month level.
+  data:
+    - emi_burden
+    - monthly_emi
+    - income_features

@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "customer_id": "CUST-DEMO-PERSONA-P01-001",
+    "request_id": "b3e1f7a2-4444-4bbb-9999-111111111101",
+    "timestamp": "2026-04-14T10:00:00.000Z",
+    "version": "0.1"
+  },
+  "error": null,
+  "data": {
+    "insights": {
+      "spending": [
+            {
+                "id": "spending_02",
+                "theme": "discretionary_vs_essential",
+                "headline": "Manage Core Expenses",
+                "description": "Your essential spending averaged ₹69,000 monthly over the last three months, making up over 72% of your total outgoings. This high proportion indicates limited flexibility for discretionary adjustments.",
+                "cta": "Review Essential Costs"
+            },
+            {
+                "id": "spending_03",
+                "theme": "top_spend_drivers",
+                "headline": "Review Top Spending",
+                "description": "Your spending on Grocery, Food, and Shopping totaled ₹102,224 over the last three months. Focusing on these top categories can help you manage your overall spend of ₹329,350.",
+                "cta": "Manage Category Spending"
+            },
+            {
+                "id": "spending_04",
+                "theme": "category_trend_shift",
+                "headline": "Leverage Grocery Efficiency",
+                "description": "Your grocery spending decreased by ₹10,982 from the prior three months to the last three months, creating an opportunity to reallocate these funds.",
+                "cta": "Plan fund allocation"
+            },
+            {
+                "id": "spending_05",
+                "theme": "small_ticket_leakage",
+                "headline": "Trim Frequent Spends",
+                "description": "Your 87 UPI transactions over the last 3 months, averaging ₹1,448 each, add up to ₹1.26 Lakh. Reducing just 3 such transactions monthly could free up over ₹4,300.",
+                "cta": "Review UPI History"
+            },
+            {
+                "id": "spending_06",
+                "theme": "merchant_dependency",
+                "headline": "Diversify E-commerce",
+                "description": "Spending ₹6,800 with one e-commerce platform accounts for 68% of your total online shopping. Exploring other options could offer better value.",
+                "cta": "Compare online stores"
+            },
+            {
+                "id": "spending_07",
+                "theme": "impulse_spending_pattern",
+                "headline": "Trim Weekend Spending",
+                "description": "Your weekend spending recently rose to 34% of your total, up from 31%. Reverting to this pattern could free up ₹3,800 monthly.",
+                "cta": "Plan Weekend Purchases"
+            },
+            {
+                "id": "spending_08",
+                "theme": "subscription_features",
+                "headline": "Review Subscriptions",
+                "description": "With 6 recurring subscriptions totaling ₹28,400, reviewing your redundant streaming service could optimize your spending.",
+                "cta": "Review Subscriptions"
+            },
+            {
+                "id": "spending_09",
+                "theme": "liquidity_resilience",
+                "headline": "Boost Liquid Savings",
+                "description": "Your total bank account balance has decreased by ₹40,000 in the last 90 days. Rebuilding this liquid buffer can enhance your short-term financial resilience.",
+                "cta": "Increase Bank Balances"
+            },
+            {
+                "id": "spending_10",
+                "theme": "bill_payments",
+                "headline": "Streamline Bill Payments",
+                "description": "Your Airtel Xstream broadband bill for ₹999 was overdue in one of the last four months. Ensuring timely payments can help avoid potential late fees.",
+                "cta": "Set up auto-pay"
+            },
+            {
+                "id": "spending_11",
+                "theme": "savings_rate_trend",
+                "headline": "Boost Savings Consistency",
+                "description": "Your savings rate reached 40% with a ₹76,000 surplus in April. Increase your surplus months (3 of last 6) to build reserves faster.",
+                "cta": "Track Monthly Surplus"
+            },
+            {
+                "id": "spending_12",
+                "theme": "emergency_corpus_gap",
+                "headline": "Build Emergency Fund",
+                "description": "Your emergency fund covers about 2.6 months of average spending. Increasing it by ₹14 Lakh would align it with the ideal 15.6 months of coverage.",
+                "cta": "Grow Emergency Savings"
+            },
+            {
+                "id": "spending_13",
+                "theme": "income_spend_volatility",
+                "headline": "Manage Income Swings",
+                "description": "Your income varied by ₹53,000 over the last five months, while your spending changed by only ₹20,000. This difference means stable spending can be challenging during lower income periods.",
+                "cta": "Build a Buffer"
+            },
+            {
+                "id": "spending_14",
+                "theme": "salary_cycle_behavior",
+                "headline": "Balance Salary Spending",
+                "description": "38% of your last month's spending occurred right after salary, up from 35% over 90 days. Spreading this out helps manage funds better.",
+                "cta": "Review spending habits"
+            },
+            {
+                "id": "spending_15",
+                "theme": "credit_channel_exposure",
+                "headline": "Maintain Reduced Credit",
+                "description": "Your credit and pay-later spending was ₹8,650 in the last three months, a ₹700 decrease from the prior period. Continue this positive trend.",
+                "cta": "Review Credit Use"
+            },
+            {
+                "id": "spending_16",
+                "theme": "cash_withdrawal_pattern",
+                "headline": "Optimize Cash Usage",
+                "description": "Your average monthly cash withdrawals have decreased by ₹1,934, from ₹6,167 (4-6 months ago) to ₹4,233 (last 3 months). Further reducing cash helps track spending better.",
+                "cta": "Review Cash Needs"
+            }
+        ],
+        "borrowing": [],
+        "protection": [],
+        "wealth": [],
+        "tax": []
+      }
+    }
+}

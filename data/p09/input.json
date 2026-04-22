@@ -1,0 +1,501 @@
+{
+  "metadata": {
+    "customer_id": "CUST-DEMO-PERSONA-P09-001",
+    "request_id": "b3e1f7a2-4444-4bbb-9999-111111111109",
+    "timestamp": "2026-04-10T10:30:00.000",
+    "version": "0.1",
+    "type": [
+      "spending",
+      "borrowing",
+      "protection",
+      "tax",
+      "wealth"
+    ]
+  },
+  "data": {
+    "customer_id": "CUST-DEMO-PERSONA-P09-001",
+    "age": 37,
+    "city": "Gurugram",
+    "profession_type": "Enterprise Sales Director",
+    "annual_income": 7500000,
+    "family_size": 3,
+    "jio_score": 56,
+    "spending_score": 48,
+    "monthly_income": [
+      {
+        "month": "2025-12-31",
+        "value": 628000
+      },
+      {
+        "month": "2026-01-31",
+        "value": 615000
+      },
+      {
+        "month": "2026-02-28",
+        "value": 622000
+      },
+      {
+        "month": "2026-03-31",
+        "value": 620000
+      },
+      {
+        "month": "2026-04-30",
+        "value": 635000
+      }
+    ],
+    "monthly_spend": [
+      {
+        "month": "2025-12-31",
+        "value": 412000
+      },
+      {
+        "month": "2026-01-31",
+        "value": 405000
+      },
+      {
+        "month": "2026-02-28",
+        "value": 408000
+      },
+      {
+        "month": "2026-03-31",
+        "value": 406000
+      },
+      {
+        "month": "2026-04-30",
+        "value": 410000
+      }
+    ],
+    "spend_to_income_ratio": [
+      {
+        "month": "2025-12-31",
+        "value": 0.66
+      },
+      {
+        "month": "2026-01-31",
+        "value": 0.66
+      },
+      {
+        "month": "2026-02-28",
+        "value": 0.66
+      },
+      {
+        "month": "2026-03-31",
+        "value": 0.65
+      },
+      {
+        "month": "2026-04-30",
+        "value": 0.65
+      }
+    ],
+    "saving_consistency": [
+      {
+        "month": "2025-05-31",
+        "value": 1
+      },
+      {
+        "month": "2025-06-30",
+        "value": 1
+      },
+      {
+        "month": "2025-07-31",
+        "value": 0
+      },
+      {
+        "month": "2025-08-31",
+        "value": 1
+      },
+      {
+        "month": "2025-09-30",
+        "value": 1
+      },
+      {
+        "month": "2025-10-31",
+        "value": 1
+      },
+      {
+        "month": "2025-11-30",
+        "value": 1
+      },
+      {
+        "month": "2025-12-31",
+        "value": 1
+      },
+      {
+        "month": "2026-01-31",
+        "value": 1
+      },
+      {
+        "month": "2026-02-28",
+        "value": 1
+      },
+      {
+        "month": "2026-03-31",
+        "value": 0
+      },
+      {
+        "month": "2026-04-30",
+        "value": 1
+      }
+    ],
+    "emergency_corpus": 680000,
+    "ideal_emergency_corpus": 4080000,
+    "borrowing_score": 42,
+    "emi_burden": [
+      {
+        "month": "2025-12-31",
+        "value": 0.32
+      },
+      {
+        "month": "2026-01-31",
+        "value": 0.32
+      },
+      {
+        "month": "2026-02-28",
+        "value": 0.32
+      },
+      {
+        "month": "2026-03-31",
+        "value": 0.32
+      },
+      {
+        "month": "2026-04-30",
+        "value": 0.31
+      }
+    ],
+    "monthly_emi": [
+      {
+        "month": "2025-12-31",
+        "value": 198000
+      },
+      {
+        "month": "2026-01-31",
+        "value": 197000
+      },
+      {
+        "month": "2026-02-28",
+        "value": 197500
+      },
+      {
+        "month": "2026-03-31",
+        "value": 197200
+      },
+      {
+        "month": "2026-04-30",
+        "value": 198500
+      }
+    ],
+    "credit_score": [
+      {
+        "month": "2025-12-31",
+        "value": 758
+      },
+      {
+        "month": "2026-01-31",
+        "value": 762
+      },
+      {
+        "month": "2026-02-28",
+        "value": 765
+      },
+      {
+        "month": "2026-03-31",
+        "value": 768
+      },
+      {
+        "month": "2026-04-30",
+        "value": 770
+      }
+    ],
+    "protection_score": 70,
+    "life_cover_adequacy": 1.05,
+    "current_life_cover": 12600000,
+    "ideal_life_cover": 12000000,
+    "health_cover_adequacy": 1.08,
+    "current_health_cover": 1080000,
+    "ideal_health_cover": 1000000,
+    "tax_score": 65,
+    "tax_filing_status": "Yes",
+    "tax_regime": "Old",
+    "tax_saving_index": 2.2,
+    "tax_saving_index_availed": [
+      "EPF",
+      "Life Insurance Premium",
+      "Health Insurance Premium",
+      "NPS"
+    ],
+    "tax_saving_index_possible": [
+      "EPF",
+      "Life Insurance Premium",
+      "Health Insurance Premium",
+      "ELSS",
+      "PPF",
+      "NPS"
+    ],
+    "wealth_score": 62,
+    "monthly_investment": [
+      {
+        "month": "2025-12-31",
+        "value": 48000
+      },
+      {
+        "month": "2026-01-31",
+        "value": 47000
+      },
+      {
+        "month": "2026-02-28",
+        "value": 47500
+      },
+      {
+        "month": "2026-03-31",
+        "value": 47200
+      },
+      {
+        "month": "2026-04-30",
+        "value": 47800
+      }
+    ],
+    "investment_rate": [
+      {
+        "month": "2025-12-31",
+        "value": 0.08
+      },
+      {
+        "month": "2026-01-31",
+        "value": 0.08
+      },
+      {
+        "month": "2026-02-28",
+        "value": 0.08
+      },
+      {
+        "month": "2026-03-31",
+        "value": 0.08
+      },
+      {
+        "month": "2026-04-30",
+        "value": 0.08
+      }
+    ],
+    "portfolio_diversification": [
+      {
+        "name": "Equity",
+        "value": 48
+      },
+      {
+        "name": "Debt",
+        "value": 22
+      },
+      {
+        "name": "Gold",
+        "value": 12
+      },
+      {
+        "name": "FD",
+        "value": 18
+      }
+    ],
+    "portfolio_overlap": [],
+    "metric_level_scores": {
+      "spend_to_income_ratio": 41.0,
+      "saving_consistency": 78.8,
+      "emergency_corpus": 11.0,
+      "emi_burden": 42.4,
+      "credit_score": 86.9,
+      "life_insurance": 73.0,
+      "health_insurance": 73.0,
+      "tax_filing_status": 88.8,
+      "tax_savings": 41.6,
+      "investment_rate": 32.3
+    },
+    "features": {
+      "finbox": {
+        "category_spending_profile": {
+          "total_essential_spends_food_m12": 48059.0,
+          "total_essential_spends_grocery_m12": 27768.0,
+          "total_essential_spends_utilities_m12": 18664.0,
+          "total_essential_spends_rental_m12": 63241.0,
+          "total_essential_spends_commute_m12": 22514.0,
+          "total_essential_spends_fuel_m12": 25978.0,
+          "total_essential_spends_telco_m12": 16245.0,
+          "total_essential_spends_health_m12": 10687.0,
+          "total_essential_spends_education_m12": 34995.0,
+          "total_discretionary_spends_shopping_m12": 36959.0,
+          "total_discretionary_spends_entertainment_m12": 31293.0,
+          "total_discretionary_spends_travel_m12": 45618.0,
+          "total_essential_spends_insurance_m12": 14139.0,
+          "total_essential_spends_others_m12": 21828.0,
+          "total_essential_spends_food_m11": 44626.0,
+          "total_essential_spends_grocery_m11": 34438.0,
+          "total_essential_spends_utilities_m11": 16343.0,
+          "total_essential_spends_rental_m11": 64656.0,
+          "total_essential_spends_commute_m11": 22052.0,
+          "total_essential_spends_fuel_m11": 12740.0,
+          "total_essential_spends_telco_m11": 13571.0,
+          "total_essential_spends_health_m11": 20178.0,
+          "total_essential_spends_education_m11": 30991.0,
+          "total_discretionary_spends_shopping_m11": 36300.0,
+          "total_discretionary_spends_entertainment_m11": 41381.0,
+          "total_discretionary_spends_travel_m11": 39350.0,
+          "total_essential_spends_insurance_m11": 14192.0,
+          "total_essential_spends_others_m11": 18469.0,
+          "total_essential_spends_food_m10": 42185.0,
+          "total_essential_spends_grocery_m10": 31166.0,
+          "total_essential_spends_utilities_m10": 23068.0,
+          "total_essential_spends_rental_m10": 58958.0,
+          "total_essential_spends_commute_m10": 15351.0,
+          "total_essential_spends_fuel_m10": 25527.0,
+          "total_essential_spends_telco_m10": 5608.0,
+          "total_essential_spends_health_m10": 15586.0,
+          "total_essential_spends_education_m10": 34509.0,
+          "total_discretionary_spends_shopping_m10": 38793.0,
+          "total_discretionary_spends_entertainment_m10": 34988.0,
+          "total_discretionary_spends_travel_m10": 38183.0,
+          "total_essential_spends_insurance_m10": 21549.0,
+          "total_essential_spends_others_m10": 15494.0,
+          "total_essential_spends_food_m9": 53694.0,
+          "total_essential_spends_grocery_m9": 43126.0,
+          "total_essential_spends_utilities_m9": 19999.0,
+          "total_essential_spends_rental_m9": 83938.0,
+          "total_essential_spends_commute_m9": 14485.0,
+          "total_essential_spends_fuel_m9": 24775.0,
+          "total_essential_spends_telco_m9": 15321.0,
+          "total_essential_spends_health_m9": 20843.0,
+          "total_essential_spends_education_m9": 45073.0,
+          "total_discretionary_spends_shopping_m9": 53251.0,
+          "total_discretionary_spends_entertainment_m9": 42586.0,
+          "total_discretionary_spends_travel_m9": 107794.0,
+          "total_essential_spends_insurance_m9": 33694.0,
+          "total_essential_spends_others_m9": 38781.0,
+          "total_essential_spends_food_m8": 39141.0,
+          "total_essential_spends_grocery_m8": 40952.0,
+          "total_essential_spends_utilities_m8": 22865.0,
+          "total_essential_spends_rental_m8": 62623.0,
+          "total_essential_spends_commute_m8": 19487.0,
+          "total_essential_spends_fuel_m8": 26202.0,
+          "total_essential_spends_telco_m8": 12765.0,
+          "total_essential_spends_health_m8": 11993.0,
+          "total_essential_spends_education_m8": 25203.0,
+          "total_discretionary_spends_shopping_m8": 38089.0,
+          "total_discretionary_spends_entertainment_m8": 29079.0,
+          "total_discretionary_spends_travel_m8": 36370.0,
+          "total_essential_spends_insurance_m8": 27848.0,
+          "total_essential_spends_others_m8": 30864.0,
+          "total_essential_spends_food_m7": 38473.0,
+          "total_essential_spends_grocery_m7": 35826.0,
+          "total_essential_spends_utilities_m7": 19042.0,
+          "total_essential_spends_rental_m7": 69220.0,
+          "total_essential_spends_commute_m7": 15937.0,
+          "total_essential_spends_fuel_m7": 16869.0,
+          "total_essential_spends_telco_m7": 4099.0,
+          "total_essential_spends_health_m7": 17641.0,
+          "total_essential_spends_education_m7": 29299.0,
+          "total_discretionary_spends_shopping_m7": 42959.0,
+          "total_discretionary_spends_entertainment_m7": 39855.0,
+          "total_discretionary_spends_travel_m7": 39881.0,
+          "total_essential_spends_insurance_m7": 16111.0,
+          "total_essential_spends_others_m7": 33205.0,
+          "total_essential_spends_food_m6": 41561.0,
+          "total_essential_spends_grocery_m6": 26348.0,
+          "total_essential_spends_utilities_m6": 13201.0,
+          "total_essential_spends_rental_m6": 55641.0,
+          "total_essential_spends_commute_m6": 18672.0,
+          "total_essential_spends_fuel_m6": 25539.0,
+          "total_essential_spends_telco_m6": 6992.0,
+          "total_essential_spends_health_m6": 9333.0,
+          "total_essential_spends_education_m6": 31162.0,
+          "total_discretionary_spends_shopping_m6": 49620.0,
+          "total_discretionary_spends_entertainment_m6": 33605.0,
+          "total_discretionary_spends_travel_m6": 49205.0,
+          "total_essential_spends_insurance_m6": 26677.0,
+          "total_essential_spends_others_m6": 16752.0,
+          "total_essential_spends_food_m5": 41885.0,
+          "total_essential_spends_grocery_m5": 33587.0,
+          "total_essential_spends_utilities_m5": 19813.0,
+          "total_essential_spends_rental_m5": 54141.0,
+          "total_essential_spends_commute_m5": 17565.0,
+          "total_essential_spends_fuel_m5": 13263.0,
+          "total_essential_spends_telco_m5": 6693.0,
+          "total_essential_spends_health_m5": 14682.0,
+          "total_essential_spends_education_m5": 37776.0,
+          "total_discretionary_spends_shopping_m5": 44273.0,
+          "total_discretionary_spends_entertainment_m5": 27147.0,
+          "total_discretionary_spends_travel_m5": 38496.0,
+          "total_essential_spends_insurance_m5": 14296.0,
+          "total_essential_spends_others_m5": 29445.0,
+          "total_essential_spends_food_m4": 46685.0,
+          "total_essential_spends_grocery_m4": 29249.0,
+          "total_essential_spends_utilities_m4": 22589.0,
+          "total_essential_spends_rental_m4": 62761.0,
+          "total_essential_spends_commute_m4": 10618.0,
+          "total_essential_spends_fuel_m4": 24599.0,
+          "total_essential_spends_telco_m4": 8772.0,
+          "total_essential_spends_health_m4": 20795.0,
+          "total_essential_spends_education_m4": 33021.0,
+          "total_discretionary_spends_shopping_m4": 32537.0,
+          "total_discretionary_spends_entertainment_m4": 29667.0,
+          "total_discretionary_spends_travel_m4": 32844.0,
+          "total_essential_spends_insurance_m4": 27308.0,
+          "total_essential_spends_others_m4": 30555.0,
+          "total_essential_spends_food_m3": 46604.0,
+          "total_essential_spends_grocery_m3": 29748.0,
+          "total_essential_spends_utilities_m3": 13297.0,
+          "total_essential_spends_rental_m3": 67939.0,
+          "total_essential_spends_commute_m3": 23814.0,
+          "total_essential_spends_fuel_m3": 13753.0,
+          "total_essential_spends_telco_m3": 7998.0,
+          "total_essential_spends_health_m3": 9368.0,
+          "total_essential_spends_education_m3": 37205.0,
+          "total_discretionary_spends_shopping_m3": 45520.0,
+          "total_discretionary_spends_entertainment_m3": 26800.0,
+          "total_discretionary_spends_travel_m3": 40739.0,
+          "total_essential_spends_insurance_m3": 21392.0,
+          "total_essential_spends_others_m3": 20823.0,
+          "total_essential_spends_food_m2": 47691.0,
+          "total_essential_spends_grocery_m2": 31930.0,
+          "total_essential_spends_utilities_m2": 15969.0,
+          "total_essential_spends_rental_m2": 62913.0,
+          "total_essential_spends_commute_m2": 20420.0,
+          "total_essential_spends_fuel_m2": 15792.0,
+          "total_essential_spends_telco_m2": 5175.0,
+          "total_essential_spends_health_m2": 24824.0,
+          "total_essential_spends_education_m2": 35694.0,
+          "total_discretionary_spends_shopping_m2": 40480.0,
+          "total_discretionary_spends_entertainment_m2": 33498.0,
+          "total_discretionary_spends_travel_m2": 35215.0,
+          "total_essential_spends_insurance_m2": 16183.0,
+          "total_essential_spends_others_m2": 22216.0,
+          "total_essential_spends_food_m1": 40937.0,
+          "total_essential_spends_grocery_m1": 27364.0,
+          "total_essential_spends_utilities_m1": 15345.0,
+          "total_essential_spends_rental_m1": 52525.0,
+          "total_essential_spends_commute_m1": 17890.0,
+          "total_essential_spends_fuel_m1": 15483.0,
+          "total_essential_spends_telco_m1": 14320.0,
+          "total_essential_spends_health_m1": 48000.0,
+          "total_essential_spends_education_m1": 24845.0,
+          "total_discretionary_spends_shopping_m1": 35397.0,
+          "total_discretionary_spends_entertainment_m1": 34305.0,
+          "total_discretionary_spends_travel_m1": 35021.0,
+          "total_essential_spends_insurance_m1": 13955.0,
+          "total_essential_spends_others_m1": 30613.0,
+          "total_essential_spends_food_m0": 41699.0,
+          "total_essential_spends_grocery_m0": 32157.0,
+          "total_essential_spends_utilities_m0": 14237.0,
+          "total_essential_spends_rental_m0": 65913.0,
+          "total_essential_spends_commute_m0": 14405.0,
+          "total_essential_spends_fuel_m0": 19578.0,
+          "total_essential_spends_telco_m0": 14566.0,
+          "total_essential_spends_health_m0": 9344.0,
+          "total_essential_spends_education_m0": 36312.0,
+          "total_discretionary_spends_shopping_m0": 44620.0,
+          "total_discretionary_spends_entertainment_m0": 26315.0,
+          "total_discretionary_spends_travel_m0": 46003.0,
+          "total_essential_spends_insurance_m0": 26146.0,
+          "total_essential_spends_others_m0": 18705.0
+        },
+        "is_income_stable": 0,
+        "surplus": 225000
+      }
+    }
+  }
+}

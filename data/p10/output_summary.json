@@ -1,0 +1,48 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111110",
+        "timestamp": "2026-04-20T15:13:52.979968+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "A consistently high spend-to-income ratio, coupled with variable earnings, limits savings. Reviewing travel and rental spend is key.",
+            "saving_consistency": "Moderate savings consistency means missed opportunities to build wealth. Reviewing entertainment spend could help maintain a more regular savings habit.",
+            "emergency_corpus": "Your emergency cushion is significantly low, leaving you vulnerable to unexpected financial shocks. Building this fund is crucial for stability.",
+            "emi_burden": "Maintaining a low loan repayment load provides significant financial flexibility, allowing you more room for savings and other financial goals.",
+            "credit_score": "A declining credit score can impact your ability to access favorable loan terms and interest rates for future borrowing needs.",
+            "life_insurance": "Well done — your life cover is above the recommended level, providing solid financial security for your dependents.",
+            "health_insurance": "Your health cover comfortably exceeds the recommended level, offering robust protection against potential medical expenses.",
+            "tax_filing_status": "Maintaining a current tax filing status is crucial for compliance and establishing a clear financial record. This forms the basis for all tax planning.",
+            "tax_savings": "Improving your tax optimization can significantly reduce your taxable income, potentially freeing up more funds for investments and other financial goals.",
+            "investment_rate": "A higher investment rate directly impacts your long-term wealth growth, helping you achieve financial goals faster and build substantial assets.",
+            "portfolio_diversification": "Diversifying across asset classes helps spread risk and capture growth opportunities, making your wealth journey more resilient to market changes.",
+            "portfolio_overlap": "Understanding fund overlap is crucial to avoid unintended concentration risks and ensure your investments are working efficiently towards your goals."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Review Spends",
+                "action": "jio://spend/track"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayment load is healthy at 8% of income, providing a stable financial base. However, spending discipline, tax optimization, and building an emergency cushion need attention.",
+            "whats_going_well": [
+                "Your life and health insurance covers comfortably exceed recommended levels, securing your household.",
+                "Your loan repayment load is consistently healthy, reflecting prudent debt management and financial flexibility.",
+                "Your investment portfolio is well-diversified across asset classes, providing a solid foundation for growth and risk management.",
+                "Your tax filing status is current, ensuring compliance with essential obligations and providing a clear starting point."
+            ],
+            "whats_needs_attention": [
+                "Your emergency cushion is very low at 1.3 months, leaving your household vulnerable to unexpected costs.",
+                "A stretched spend-to-income ratio of 85% limits consistent savings and overall financial progress.",
+                "Your tax optimization is low (1.4 out of 5), indicating significant missed opportunities for savings.",
+                "Your credit profile, while still good, shows a concerning declining trend over recent months.",
+                "Your investment commitment is modest at 5.0% of income, slowing your long-term wealth accumulation."
+            ]
+        }
+    }
+}

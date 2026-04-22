@@ -1,0 +1,133 @@
+tax_filing_discipline:
+  prompt: >
+    Use tax_features.itr (itr_filed_flag_y0, itr_filed_flag_y1) to generate one insight
+    on the user's income tax return filing behavior. If both years show filing, describe
+    consistent compliance. If the current year (y0) is not filed but the previous year (y1)
+    was, highlight a potential gap in the current cycle. If neither year is filed, flag
+    the absence of ITR filing in available data. Combine with tax_filing_status from the
+    data payload if available for additional context. Do not provide legal advice.
+  data:
+    - tax_features.itr
+    - tax_filing_status
+
+tds_income_signal:
+  prompt: >
+    Use tax_features.tds (amt_tds_filed_y0, amt_tds_filed_y1, avg_monthly_tds_y0,
+    avg_monthly_tds_y1) to generate one insight on the user's TDS pattern as a proxy
+    for formal income. Compare current year vs previous year TDS amounts. If TDS has
+    grown year-over-year, note rising formal income. If TDS is zero in both years,
+    state that no TDS deduction was detected, suggesting income may be below taxable
+    threshold or from non-salaried sources. Quantify the amounts in INR where non-zero.
+    Do not infer exact income; only describe TDS as a signal.
+  data:
+    - tax_features.tds
+
+advance_tax_behavior:
+  prompt: >
+    Use tax_features.advance_tax (amt_adv_tax_y0_q1 through q4, amt_adv_tax_y1_q1
+    through q4) to generate one insight on advance tax payment discipline. If any
+    quarterly payments are non-zero, describe the pattern — whether payments are
+    consistent across quarters or concentrated in a single quarter (common for
+    self-employed/business income). Compare current year (y0) vs previous year (y1)
+    totals. If all values are zero, state that no advance tax payments were detected,
+    which may indicate salaried income (TDS covers obligation) or income below threshold.
+  data:
+    - tax_features.advance_tax
+    - tax_features.tds
+
+gst_compliance:
+  prompt: >
+    Use tax_features.gst to generate one insight on the user's GST compliance posture.
+    If gst_filed_flag is true for either year, the user has business/professional income.
+    Compare amt_gst_filed_y0 vs y1 to detect growth or decline. If gst_bill_not_filed
+    flags are active (especially c30 or c7), highlight a recent compliance lapse and
+    quantify how many bills were not filed using num_gst_bill_not_filed counts. If GST
+    flags are all false, state that no GST activity was detected, suggesting the user
+    likely does not have GST-applicable income. Keep the tone factual; do not advise
+    on filing deadlines.
+  data:
+    - tax_features.gst
+
+tax_saving_utilization:
+  prompt: >
+    Use tax_saving_index, tax_saving_index_availed, and tax_saving_index_possible from
+    the data payload to generate one insight on tax-saving instrument utilization.
+    Compare availed instruments against possible ones. Quantify how many out of the
+    possible instruments are being used (e.g., "2 out of 5"). Highlight the gap in
+    utilization without recommending specific products. Mention the availed instruments
+    by name if present in data. Cross-reference with tax_features.tax_saving_instruments
+    to validate whether actual transactions for ELSS, NPS, or PPF exist in the bank
+    statement.
+  data:
+    - tax_saving_index
+    - tax_saving_index_availed
+    - tax_saving_index_possible
+    - tax_features.tax_saving_instruments
+
+elss_investment_trend:
+  prompt: >
+    Use tax_features.tax_saving_instruments.elss to generate one insight on ELSS
+    (Equity Linked Savings Scheme) investment behavior. Focus on monthly amounts
+    (amt_elss_investment_m0 through m6) to identify whether the user invests regularly
+    (SIP-like pattern) or makes lump-sum contributions concentrated in certain months.
+    Compare recent months against older cumulative windows (c90 vs c360) to assess
+    whether ELSS activity is growing, stable, or dormant. Quantify amounts in INR.
+    If all values are zero, state that no ELSS investments were detected in the
+    transaction data.
+  data:
+    - tax_features.tax_saving_instruments
+
+nps_contribution_pattern:
+  prompt: >
+    Use tax_features.tax_saving_instruments.nps to generate one insight on National
+    Pension System contributions. Check nps_flag and cnt_nps_trx to confirm activity.
+    Use monthly amounts (m0-m6) to detect regularity — consistent monthly amounts
+    suggest employer NPS or voluntary SIP, while sporadic amounts suggest ad-hoc
+    contributions. Mention investment_balance_nps_latest to give context on accumulated
+    corpus. Use nps_trx_recency to assess how recently contributions were made. If
+    nps_flag is false or all amounts are zero, state that no NPS activity was detected.
+  data:
+    - tax_features.tax_saving_instruments
+
+ppf_contribution_pattern:
+  prompt: >
+    Use tax_features.tax_saving_instruments.ppf to generate one insight on PPF
+    (Public Provident Fund) contributions. Check ppf_flag and cnt_ppf_trx for
+    activity confirmation. Analyze monthly amounts to determine whether contributions
+    are regular or lump-sum. Mention investment_balance_ppf_latest for corpus context.
+    Use ppf_trx_recency to determine if contributions are current or lapsed. If
+    ppf_flag is false or all amounts are zero, state that no PPF activity was detected.
+    Note that PPF has an annual limit of INR 1.5 lakh under Section 80C.
+  data:
+    - tax_features.tax_saving_instruments
+
+epf_health_check:
+  prompt: >
+    Use tax_features.epf to generate one insight on the user's EPF (Employees'
+    Provident Fund) position. If epf_flag is true, describe the user's EPF status:
+    use epf_credit_avg_3mo and epf_credit_avg_6mo to assess monthly contribution
+    consistency, epf_latest_balance for corpus size, and epf_vintage for tenure.
+    If epf_latest_claim_amt is non-null, note a recent withdrawal and use
+    epf_claim_recency to indicate how recently it occurred. Compare monthly credits
+    (epf_credit_m1 through m6) to detect any disruption in contributions.
+    If epf_flag is false, state that no EPF activity was detected, which may indicate
+    self-employment or informal sector employment.
+  data:
+    - tax_features.epf
+
+regime_optimization:
+  prompt: >
+    Use tax_regime, tax_saving_index, and tax_features.tax_saving_instruments to
+    generate one insight about the user's tax regime choice relative to their actual
+    instrument usage. If the user is on the old regime with few deductions availed
+    and minimal ELSS/NPS/PPF transaction activity, note the potential mismatch — they
+    may benefit from the new regime's simplicity. If on the old regime with strong
+    instrument usage (multiple non-zero instruments), acknowledge the alignment. If on
+    the new regime, note the simplified structure and whether unused instruments represent
+    missed long-term wealth-building (regardless of tax benefit). Do not advise switching
+    regimes; only present the factual position.
+  data:
+    - tax_regime
+    - tax_saving_index
+    - tax_saving_index_availed
+    - tax_features.tax_saving_instruments

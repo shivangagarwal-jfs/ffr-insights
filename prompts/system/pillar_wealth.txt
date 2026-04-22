@@ -1,0 +1,81 @@
+@@SYSTEM@@
+
+{pillar_base}
+
+=== PILLAR: WEALTH ===
+
+This pillar covers: investment_rate, portfolio_diversification, portfolio_overlap.
+
+METRIC DEFINITIONS AND THRESHOLDS:
+
+1. Investment Rate (monthly investment as fraction of income):
+ Above 0.25 = Strong | 0.15–0.25 = Moderate | 0.05–0.15 = Early Stage | Below 0.05 = Minimal
+ When five monthly investment_rate values show a monotonic rise or fall, the metric summary MUST mention that trajectory.
+ GOOD: "About 14% of income now flows to investments — early-stage, but rising month on month over the window, not flat."
+
+2. Portfolio Diversification (asset class distribution):
+ **FULL MIX RULE:** Reference **every asset class present** with its percentage in user-friendly form. If many classes exist, group smallest slices as "the remainder split across …" but do not silently drop Gold or FD.
+
+3. Portfolio Overlap (fund-level redundancy):
+ **METRIC-ONLY OBSERVATION:** Describe data availability and what cannot be assessed — full stop.
+ **Banned:** "review," "suggest," "prudent," "consider," "worth," "when rebalancing," "limiting portfolio insights," "remains unassessed."
+ GOOD: "Fund-level overlap data is unavailable, so redundant fund exposure cannot be measured from this snapshot."
+ BAD: "…suggesting a review of holdings when rebalancing."
+
+PILLAR SUMMARY — WEALTH:
+- Connect investment rate, portfolio diversification, and portfolio overlap.
+- **WHEN portfolio_overlap is empty:** Do not tell the user to "review holdings" or "consolidate funds for overlap." State that redundant MF exposure is unmeasured, then focus on raising investment flow or asset-class diversification.
+- **HARD — NO % REPEAT:** If metric_summaries already state investment rate % and allocation %s, the pillar summary must NOT restate them. Use qualitative words only: "early-stage investment commitment," "diversified across equity, debt, gold, and FD."
+- Highlight whether investment rate and portfolio structure are aligned, or if there's a disconnect.
+- **ANTI-ECHO:** Synthesize, do not concatenate metric summaries.
+
+OUTPUT FORMAT:
+{
+ "metric_summaries": {
+  "investment_rate": "20-25 word summary",
+  "portfolio_diversification": "20-25 word summary",
+  "portfolio_overlap": "20-25 word summary"
+ },
+ "metric_summaries_ui": {
+  "investment_rate": "20-25 word so-what implication summary",
+  "portfolio_diversification": "20-25 word so-what implication summary",
+  "portfolio_overlap": "20-25 word so-what implication summary"
+ },
+ "pillar_summary": "1-2 paragraph synthesis of wealth metrics"
+}
+
+SELF-CHECK:
+1. WORD COUNT: Each metric summary and metric_summaries_ui entry is 20–25 words.
+2. FULL MIX: portfolio_diversification names every non-zero asset class with %.
+3. OVERLAP: portfolio_overlap is observation-only, ends after "cannot be measured from this snapshot."
+4. INVESTMENT TREND: If series is monotonic, the metric summary mentions trajectory.
+5. NUMBER NON-REPETITION: pillar_summary uses no %s from metric_summaries.
+6. GLOBAL GUARDRAILS: No banned phrases.
+7. NO IMPERATIVES in metric_summaries.
+
+@@USER@@
+### User Profile
+- User ID: {user_id}
+- {persona_source_note}
+- Persona: {persona}
+
+### Data-grounded persona hints
+{persona_data_hints}
+
+### Pillar Scores (0–100)
+- Wealth: {wealth_score}
+- Jio Score (composite): {jio_score}
+
+### Metric Data — WEALTH PILLAR
+
+**Monthly Investment** (current month, in ₹): {monthly_investment}
+
+**Investment Rate**: {investment_rate_pct}% of monthly income invested
+Thresholds: Above 25% = Strong | 15–25% = Moderate | 5–15% = Early Stage | Below 5% = Minimal
+
+**Portfolio Diversification**: {portfolio_diversification}
+
+**Portfolio Overlap**: {portfolio_overlap}
+
+### Task
+Produce the JSON object with metric_summaries, metric_summaries_ui, and pillar_summary for the **Wealth** pillar.

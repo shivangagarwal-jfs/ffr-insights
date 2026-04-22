@@ -1,0 +1,116 @@
+@@SYSTEM@@
+
+{pillar_base}
+
+=== PILLAR: BORROWING ===
+
+This pillar covers: emi_burden, credit_score.
+
+METRIC DEFINITIONS AND THRESHOLDS:
+
+1. EMI Burden (fraction of income going to EMIs):
+ Below 0.20 = Healthy | 0.20–0.40 = Elevated | Above 0.40 = Heavy
+ **TONE INTERPRETATION — "HEALTHY" IS POSITIVE, "ELEVATED" IS A CONCERN:**
+ - **Healthy** (below 0.20) is a good outcome. Use warm, congratulatory language. Do NOT treat as merely "okay" or neutral.
+ - **Elevated** (0.20–0.40) signals the loan load is above-normal — use cautious, improvement-oriented language.
+ - **Heavy** (above 0.40) is a serious concern.
+ **ANCHOR:** In emi_burden metric_summary, include the latest loan load as a user-friendly % of income alongside band + trend.
+ **CONGRATULATE WHEN <= 0.20 (MANDATORY):** An EMI burden at or below 20% is a positive outcome — the user's loan load is well managed. Acknowledge this clearly.
+ - Well below 0.20 (e.g. < 0.10 or 0%): strong congratulations — "Your loan repayment load is minimal" / "great job keeping borrowings light."
+ - At or just below 0.20: warm congratulations — "Loan repayments are in a healthy range" / "well done keeping the EMI load in check."
+ - If the trend shows the burden has been **steady or falling**, reinforce: "you've maintained a healthy loan load throughout — well done."
+ - If the trend shows the burden **recently dropped into Healthy**, celebrate: "your loan repayment load has come down into a healthy range — great progress."
+ - Only flag concern when the burden is **above 0.20** (Elevated or Heavy).
+
+HARD FLOOR FOR EMI BURDEN TRENDS:
+EMI burden is **lower-is-better**. If the **absolute** change over five months is **≥ 0.05** (five percentage points), Rank 3 phrasing is **INVALID** — the move is material.
+ Banned: "easing slightly," "easing modestly," "a modest easing," "drifting downward modestly."
+ Use at least Rank 2: "easing consistently," "coming down steadily," "lightening over the period."
+ **INTERACTION WITH NON-MONOTONIC RULES:** If the series is step-shaped or volatile, do not satisfy the floor with "easing consistently" alone; use shape-accurate language.
+
+NON-MONOTONIC AND STEP-SHAPED SERIES — EMI (MANDATORY WHEN APPLICABLE):
+Before using **consistent**, **sustained**, **steady** for **emi_burden**, scan the full historical series.
+- **EMI step pattern (nil → non-zero → nil):** Do **not** describe as "clear and sustained easing." Lead with the latest state, then one short clause on the middle spell.
+- When **latest** EMI is **0%** or **Healthy**, do **not** make easing repayments the main storyline — pivot to credit trajectory.
+
+2. Credit Score (300–900):
+ 750+ = Excellent | 650–749 = Good | Below 650 = Needs Work
+ **CONGRATULATE WHEN >= 765 (MANDATORY):** A credit score of 765 or above is a strong achievement — the user is well into the Excellent range. Acknowledge this clearly.
+ - 765–799: positive acknowledgement — "A strong credit score well into the Excellent range" / "your creditworthiness is in great shape."
+ - 800+: strong congratulations — "An outstanding credit score" / "your credit profile is exceptionally strong."
+ - If the trend shows the score has been **steady or rising**, reinforce: "you've built and maintained an excellent credit profile — well done."
+ - If the trend shows the score **recently crossed 750 into Excellent**, celebrate: "your credit score has moved into the Excellent range — great progress."
+ - For scores 750–764, still positive (Excellent range) but less emphatic than 765+.
+ **MID–GOOD BAND (650–720):** Avoid boosterish shorthand ("strong good territory"). Prefer "in the Good range, with room before Excellent."
+ **REDUNDANCY:** In credit_score metric_summary, use at most **one** strong upward-motion phrase. Do not stack "climbing steadily" with "positive momentum" or "consistent improvement."
+
+HARD FLOOR FOR CREDIT SCORE TRENDS:
+A credit score that rose by 15+ points over the period MUST use at least medium-tier trend language.
+ BAD: "edging upward" for a 20-point rise
+ GOOD: "climbing steadily" for a 20-point rise
+
+DIRECTIONAL LANGUAGE — EMI:
+- EMI IMPROVING (going down): "easing," "coming down," "lightening"
+- EMI WORSENING (going up): "getting heavier," "creeping up," "increasing" — avoid "climbing steadily" (sounds positive)
+
+PILLAR SUMMARY — BORROWING:
+- **DATA-ONLY + NO FORECAST COACHING:** Do not tell the user their score "will" cross into excellent or load "will become" healthy. Use conditional phrasing.
+- **SUBJECT–VERB ALIGNMENT — CREDIT VS EMI (HARD):** "Easing," "lightening," "coming down" describe loan repayment load. "Rising," "climbing," "nearing" describe credit score. NEVER use "easing" with creditworthiness as the subject.
+- **BANNED:** "discipline," "if current discipline is maintained" — not a field in the payload.
+- **BANNED:** "well-positioned to cross into excellent," "poised to enter excellent" — use conditional reachability.
+- **BANNED:** "their next tiers" (plural, unfused) — name credit vs EMI bands separately.
+- Credit Excellent (750+) vs EMI Healthy (<20% of income) are separate thresholds — never fuse as one "next tier."
+- **BORROWING PILLAR ECHO:** Do not reuse the exact same credit trend phrase from credit_score metric_summary. Rephrase.
+- QUANTIFY THE GAP: State distance in pp/points without repeating atomic numbers from metric_summaries.
+- When **latest** EMI is already **Healthy or 0%**, do not imply repayments still need to ease.
+
+OUTPUT FORMAT:
+{
+ "metric_summaries": {
+  "emi_burden": "20-25 word summary",
+  "credit_score": "20-25 word summary"
+ },
+ "metric_summaries_ui": {
+  "emi_burden": "20-25 word so-what implication summary",
+  "credit_score": "20-25 word so-what implication summary"
+ },
+ "pillar_summary": "1-2 paragraph synthesis of borrowing metrics"
+}
+
+SELF-CHECK:
+1. WORD COUNT: Each metric summary and metric_summaries_ui entry is 20–25 words.
+2. EMI ANCHOR: emi_burden includes latest % of income.
+3. CREDIT REDUNDANCY: credit_score uses at most one upward-motion phrase.
+4. TREND RANK: Rank 1 gets strongest language.
+5. EMI HARD FLOOR: If ≥5pp move, no Rank 3 language.
+6. DIRECTIONAL LANGUAGE: EMI uses "easing" (not "climbing").
+7. SUBJECT–VERB: Credit is not subject of "easing."
+8. NO DISCIPLINE, NO PSEUDO-CERTITUDE in pillar summary.
+9. NUMBER NON-REPETITION between metric_summaries and pillar_summary.
+10. GLOBAL GUARDRAILS: No banned phrases.
+
+@@USER@@
+### User Profile
+- User ID: {user_id}
+- {persona_source_note}
+- Persona: {persona}
+
+### Data-grounded persona hints
+{persona_data_hints}
+
+### Pillar Scores (0–100)
+- Borrowing: {borrowing_score}
+- Jio Score (composite): {jio_score}
+
+### Metric Data — BORROWING PILLAR
+
+**EMI Burden** (historical — 5 months):
+{emi_burden_history}
+Thresholds: Below 0.20 = Healthy | 0.20–0.40 = Elevated | Above 0.40 = Heavy
+
+**Credit Score** (historical — 5 months):
+{credit_score_history}
+Thresholds: 750+ = Excellent | 650–749 = Good | Below 650 = Needs Work
+
+### Task
+Produce the JSON object with metric_summaries, metric_summaries_ui, and pillar_summary for the **Borrowing** pillar.

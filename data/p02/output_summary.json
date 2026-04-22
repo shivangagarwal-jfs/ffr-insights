@@ -1,0 +1,93 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111102",
+        "timestamp": "2026-04-20T15:13:39.614915+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "Your spending consistently exceeds income, leaving minimal buffer. Reviewing essential categories like food and grocery could help bring this ratio into a healthier range.",
+            "saving_consistency": "Maintaining this strong savings consistency is crucial for building wealth and achieving your financial goals over time.",
+            "emergency_corpus": "Your emergency cushion is significantly below target, leaving you vulnerable to unexpected expenses without sufficient financial protection.",
+            "emi_burden": "An Elevated loan repayment load of 25% means less income is available for savings or other financial goals. Managing this is key.",
+            "credit_score": "Your improving credit score of 711 strengthens your creditworthiness, potentially unlocking better interest rates and financial product options in the future.",
+            "life_insurance": "Life cover falls well short of the recommended level, but your positive monthly surplus provides a path to gradually close this gap.",
+            "health_insurance": "Health cover is below the recommended level, but your available monthly surplus offers a way to enhance your protection.",
+            "tax_filing_status": "Consistent tax filing ensures compliance with regulations and is fundamental for accessing financial services and building a strong financial profile.",
+            "tax_savings": "Improving your tax saving index can significantly reduce your taxable income, freeing up more funds for your savings and investments.",
+            "investment_rate": "A minimal investment rate means your wealth growth potential is significantly limited, making it harder to reach future financial goals effectively.",
+            "portfolio_diversification": "Your current diversification helps spread risk across different asset classes, which is a positive step for long-term portfolio stability.",
+            "portfolio_overlap": "Without overlap data, it's difficult to assess if your funds are duplicating holdings, potentially limiting true diversification and efficiency."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Review your monthly budget to identify areas for adjustment.",
+                "action": "jio://budget/create"
+            },
+            "saving_consistency": {
+                "text": "Set up auto-debit to maintain your consistent savings habit.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Start building your emergency fund to cover at least six months.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Explore options to reduce your loan repayment burden.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Continue building your credit profile for even better financial opportunities.",
+                "action": "jio://credit/improve"
+            },
+            "life_insurance": {
+                "text": "Increase your term insurance to protect your family's future.",
+                "action": "jio://insurance/term"
+            },
+            "health_insurance": {
+                "text": "Review and increase your health insurance coverage for better protection.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Review your latest tax filing for accuracy and completeness.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore ELSS, PPF, and NPS to boost your tax-saving investments.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to boost long-term wealth creation.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to align with your financial objectives.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Check for fund overlap to optimize your investment portfolio.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your consistent savings habit, maintained for 9 out of 12 months, provides a strong foundation. However, elevated spending, low protection, and minimal investment commitment require immediate focus.",
+            "whats_going_well": [
+                "Your savings consistency is commendable, maintained for 9 out of 12 months, building a positive habit.",
+                "Your credit profile is improving, with a good score of 711, enhancing your creditworthiness.",
+                "You are diligently filing your taxes, ensuring financial compliance and a clear record.",
+                "Your investment portfolio shows diversification across equity, debt, and gold, spreading risk."
+            ],
+            "whats_needs_attention": [
+                "Your investment commitment is minimal at 3.0% of income, significantly limiting wealth creation.",
+                "Tax optimization is at an early stage, missing opportunities to reduce your taxable income.",
+                "Both life and health cover are underprotected, leaving your household vulnerable to unforeseen events.",
+                "Your loan repayment load is elevated at 25% of income, reducing funds for other goals.",
+                "Your spend-to-income ratio is stretched at 83%, leaving little room for savings or emergencies.",
+                "Your emergency cushion covers only 3.2 months of expenses, falling short of recommended levels."
+            ]
+        }
+    }
+}

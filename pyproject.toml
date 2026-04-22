@@ -1,0 +1,23 @@
+# Ruff: https://docs.astral.sh/ruff/
+# Run: ruff check . && ruff format .
+# Install: pip install ruff  (or: pip install -e ".[dev]" when using optional dev deps)
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = [".", "app"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+ignore = [
+    "E501",  # line length (keep formatter default; long strings allowed)
+]
+
+[tool.ruff.format]
+quote-style = "double"

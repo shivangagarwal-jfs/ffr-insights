@@ -1,0 +1,92 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111103",
+        "timestamp": "2026-04-20T15:13:36.658826+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "With spending well within control, there's consistent room each month for savings and goals. This stable position is a strong foundation.",
+            "saving_consistency": "Perfect savings consistency ensures predictable financial planning and progress towards your goals. This strong habit provides peace of mind.",
+            "emergency_corpus": "Your emergency cushion is significantly below target, leaving you with limited protection against unexpected financial shocks or income disruptions.",
+            "emi_burden": "Maintaining zero loan repayments provides significant financial flexibility, allowing you to allocate more income towards savings or other financial goals.",
+            "credit_score": "An excellent credit score opens doors to better interest rates on loans and credit products, enhancing your borrowing power significantly.",
+            "life_insurance": "Well done—your life cover meets the recommended level, giving your household solid protection. This ensures financial stability for your dependent.",
+            "health_insurance": "Your health cover is above the recommended level, providing a strong financial safety net for medical needs. This is a great achievement.",
+            "tax_filing_status": "Regular tax filing ensures compliance and helps you claim eligible deductions, potentially reducing your overall tax liability each year.",
+            "tax_savings": "With your current tax saving index, you are missing opportunities to reduce your taxable income, impacting your overall wealth creation.",
+            "investment_rate": "Maintaining a moderate investment rate is a good foundation, but increasing your commitment could significantly accelerate your wealth accumulation over time.",
+            "portfolio_diversification": "Your diversified portfolio helps spread risk and capture growth opportunities across various asset classes, contributing to overall financial stability.",
+            "portfolio_overlap": "Without fund-level overlap data, potential redundancies in your investments might exist, which could impact overall portfolio efficiency and risk."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Maintain your healthy spending habits by regularly reviewing your budget.",
+                "action": "jio://budget/create"
+            },
+            "saving_consistency": {
+                "text": "Continue your excellent savings habit by setting up auto-debit for goals.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Prioritize building your emergency fund to cover more months of expenses.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Maintain your current minimal loan obligations.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Review your credit report regularly for accuracy.",
+                "action": "jio://credit/report"
+            },
+            "life_insurance": {
+                "text": "Review your beneficiaries and policy details to ensure they are current.",
+                "action": "jio://insurance/life"
+            },
+            "health_insurance": {
+                "text": "Explore options to enhance your health cover for future medical expenses.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Review your tax returns for accuracy and completeness.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore tax-saving options like ELSS, PPF, and NPS.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Explore options to increase your monthly investment commitment for faster wealth growth.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Periodically review your asset allocation to align with evolving financial goals.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Provide more details on your funds to check for potential investment overlap.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayment load is zero, providing significant financial flexibility. Building your emergency cushion and tax efficiency are key next steps.",
+            "whats_going_well": [
+                "Your financial profile is anchored by zero loan repayments, offering substantial flexibility for future goals.",
+                "You maintain an excellent credit profile, which supports favorable borrowing terms and financial stability.",
+                "Both your life and health insurance coverage comfortably exceed recommended levels, securing your household.",
+                "Your spending is well-controlled, with perfect savings consistency every month, building a strong foundation.",
+                "Your wealth strategy includes a diversified portfolio across various asset classes."
+            ],
+            "whats_needs_attention": [
+                "Your emergency cushion is significantly below target, limiting your ability to handle unexpected financial shocks.",
+                "There is substantial headroom to enhance your tax efficiency, as your optimization score is 2.5 out of 5.",
+                "Your investment commitment is moderate, and increasing this flow could accelerate your wealth accumulation.",
+                "The absence of fund-level overlap data means potential redundancies in your portfolio are unmeasured."
+            ]
+        }
+    }
+}

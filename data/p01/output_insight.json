@@ -1,0 +1,73 @@
+{
+  "metadata": {
+      "customer_id": "CUST-DEMO-PERSONA-P01-001",
+      "request_id": "b3e1f7a2-4444-4bbb-9999-111111111101",
+      "timestamp": "2026-04-16T08:18:49.535440",
+      "version": "0.1"
+  },
+  "error": null,
+  "data": {
+          "spending": [
+              {
+                  "id": "spending_01",
+                  "theme": "overall_spends",
+                  "headline": "Reduce Monthly Spend",
+                  "description": "Your average monthly spending for January to March was INR 9,933, about 11% lower than your December spending of INR 11,200.",
+                  "cta": "Maintain spending discipline"
+              },
+              {
+                  "id": "spending_02",
+                  "theme": "category_spends",
+                  "headline": "Manage Food Spending",
+                  "description": "Your average monthly food spending increased by 50% to INR 2300 in the last three months, compared to INR 1533 in the prior three-month period.",
+                  "cta": "Review Food Expenses"
+              },
+              {
+                  "id": "spending_03",
+                  "theme": "merchant_spends",
+                  "headline": "Focus Delivery Spends",
+                  "description": "You spent INR 1560 on food and quick commerce from Zomato and Blinkit, accounting for 15.8% of your total spending in the last 30 days.",
+                  "cta": "Review delivery expenses"
+              },
+              {
+                  "id": "spending_04",
+                  "theme": "periodic_spike",
+                  "headline": "Manage Weekend Spends",
+                  "description": "Your recent weekend spending has noticeably increased compared to your past six-month average. This indicates a greater proportion of your expenses are now concentrated on weekends.",
+                  "cta": "Review weekend habits"
+              },
+              {
+                  "id": "spending_05",
+                  "theme": "subscription_features",
+                  "headline": "No Subscriptions Detected",
+                  "description": "We haven't detected any recurring subscription payments in your transactions over the past year. This means you have no recurring charges.",
+                  "cta": "Review your spending"
+              },
+              {
+                  "id": "spending_06",
+                  "theme": "liquidity_overview",
+                  "headline": "Strengthen Liquidity",
+                  "description": "You currently have no reported liquid investments like MFs or FDs. With a surplus in only 5 of the last 12 months, consider building a more consistent financial buffer.",
+                  "cta": "Build emergency savings now"
+              },
+              {
+                  "id": "spending_07",
+                  "theme": "spend_type_channel",
+                  "headline": "Optimize UPI Spends",
+                  "description": "Your UPI debits average 7 transactions monthly with a ticket size of INR 457 over the last three months, indicating frequent, smaller payments.",
+                  "cta": "Review small payments"
+              },
+              {
+                  "id": "spending_08",
+                  "theme": "bill_payments",
+                  "headline": "Jaipur Discom Bill Up",
+                  "description": "Your latest Jaipur Discom bill of INR 420 is about 5% higher than your last 4-month average of INR 399. Monitor usage to manage future costs.",
+                  "cta": "Track electricity usage"
+              }
+          ],
+          "borrowing": [],
+          "protection": [],
+          "wealth": [],
+          "tax": []
+      }
+  }

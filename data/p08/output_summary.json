@@ -1,0 +1,93 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111108",
+        "timestamp": "2026-04-20T15:13:35.289574+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "While currently healthy, your ratio has been volatile, sometimes exceeding 70%. Reviewing your shopping and food spend could help maintain stability.",
+            "saving_consistency": "Moderate savings consistency means missed opportunities. Reviewing your shopping spend, which has been rising, could significantly improve regularity.",
+            "emergency_corpus": "Your emergency cushion is significantly below target, leaving you vulnerable to unexpected expenses. Building this buffer is crucial.",
+            "emi_burden": "Keeping your loan repayments manageable ensures financial flexibility, allowing you to allocate more funds towards savings or other important goals.",
+            "credit_score": "A stronger credit score can unlock better interest rates and loan options, significantly reducing your borrowing costs over time.",
+            "life_insurance": "Your life cover falls well short of the recommended level, but your positive monthly surplus provides a path to gradually close this protection gap.",
+            "health_insurance": "Your health cover falls short of the recommended amount, but your positive monthly surplus offers a clear path to increase your protection.",
+            "tax_filing_status": "Filing your taxes ensures compliance with regulations and is essential for claiming refunds or utilizing various tax benefits.",
+            "tax_savings": "A low tax optimization score means you might be missing out on significant savings through available deductions and exemptions.",
+            "investment_rate": "An early-stage investment rate means your wealth growth might be slower than desired, impacting long-term financial goals.",
+            "portfolio_diversification": "A diversified portfolio helps spread risk across different asset classes, potentially offering more stable returns over time.",
+            "portfolio_overlap": "Without overlap data, it's hard to tell if your funds are duplicating investments, which could reduce true diversification benefits."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Track your spending to identify areas for better control.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Set up auto-debit for savings to build a consistent habit.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Start building your emergency fund to reach the recommended target.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Consider prepaying loans to further reduce your repayment commitments.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Check your credit report to understand how to improve your score.",
+                "action": "jio://credit/report"
+            },
+            "life_insurance": {
+                "text": "Increase your life cover to better protect your family's future.",
+                "action": "jio://insurance/term"
+            },
+            "health_insurance": {
+                "text": "Review and increase your health cover for better medical security.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Ensure timely filing of your Income Tax Returns annually.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore options like PPF, NPS, and Life Insurance for tax savings.",
+                "action": "jio://tax/80c"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to accelerate wealth creation.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to align with your financial goals.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Provide fund details to check for potential investment overlaps.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your loan repayments are healthy at 17% of income, providing a stable financial base. However, protection, tax efficiency, and savings discipline require focused attention for your household.",
+            "whats_going_well": [
+                "Your loan repayment load is well-managed at 17% of income, ensuring financial flexibility.",
+                "Your credit profile is good at 712 and shows consistent improvement, enhancing future borrowing options.",
+                "Your latest spending-to-income ratio is healthy at 69%, indicating effective expense control.",
+                "Your investment portfolio is well-diversified across asset classes, spreading risk effectively."
+            ],
+            "whats_needs_attention": [
+                "Your life and health covers are significantly below recommended levels, leaving your family vulnerable.",
+                "Your tax optimization is very low (1.2 out of 5), missing opportunities to reduce taxable income.",
+                "While improving, your credit profile at 712 still has room to reach the excellent tier for better terms.",
+                "Your emergency cushion is critically low at 1.2 months, inadequate for unexpected financial shocks.",
+                "Savings consistency is moderate, with only 6 out of 12 months meeting the threshold, impacting wealth building.",
+                "Your investment commitment is early-stage at 6% of income, slowing your long-term wealth accumulation."
+            ]
+        }
+    }
+}

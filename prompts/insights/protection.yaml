@@ -1,0 +1,115 @@
+life_cover_gap:
+  prompt: >
+    Use life_cover_adequacy, current_life_cover, and ideal_life_cover to generate one
+    insight on the user's life insurance coverage gap. Compare current cover against
+    the ideal benchmark. Quantify the gap in INR if under-covered, or the surplus if
+    over-covered. Express adequacy as a ratio or percentage. Do not recommend specific
+    products; only describe the coverage position factually.
+  data:
+    - life_cover_adequacy
+    - current_life_cover
+    - ideal_life_cover
+
+health_cover_gap:
+  prompt: >
+    Use health_cover_adequacy, current_health_cover, and ideal_health_cover to generate
+    one insight on the user's health insurance coverage position. Quantify the gap or
+    surplus in INR and express the adequacy ratio. If under-covered, state the shortfall
+    amount. If adequately covered, acknowledge the position. Do not recommend specific
+    products or providers.
+  data:
+    - health_cover_adequacy
+    - current_health_cover
+    - ideal_health_cover
+
+cover_adequacy_overview:
+  prompt: >
+    Combine life_cover_adequacy and health_cover_adequacy to produce one holistic insight
+    on the user's overall protection readiness. Compare both adequacy ratios side by side.
+    Identify which cover (life or health) has the larger gap relative to its ideal.
+    Quantify both gaps in INR and highlight which area needs more attention. Keep the
+    tone factual; do not advise purchasing any product.
+  data:
+    - life_cover_adequacy
+    - current_life_cover
+    - ideal_life_cover
+    - health_cover_adequacy
+    - current_health_cover
+    - ideal_health_cover
+
+health_insurance_activity:
+  prompt: >
+    Use insurance_features.health_insurance to generate one insight on the user's health
+    insurance engagement. Focus on whether the user has recently applied for, renewed, or
+    let a health insurance policy expire. Compare counts across windows (c30 vs c90 vs c180
+    vs c360) to identify whether activity is recent or stale. If renewal flags are active
+    in recent windows, describe the user as actively maintaining coverage. If expired flags
+    are present with no renewal, highlight a lapse risk. If application flags exist but no
+    renewal, the user may be shopping for a new policy. If all counts and flags are zero,
+    state that no health insurance activity was detected in the transaction data.
+    Quantify the counts where non-zero and mention the time window.
+  data:
+    - insurance_features.health_insurance
+    - health_cover_adequacy
+    - current_health_cover
+
+life_insurance_activity:
+  prompt: >
+    Use insurance_features.life_insurance to generate one insight on the user's life
+    insurance engagement. Focus on whether the user has recently applied for, renewed, or
+    let a life insurance policy expire. Compare counts across windows (c30 vs c90 vs c180
+    vs c360) to determine recency of activity. If renewal flags are active recently,
+    describe the user as maintaining life coverage. If expired flags are present without
+    corresponding renewal, highlight a coverage lapse risk. If application flags exist
+    without renewal, the user may be exploring new life cover. If all values are zero,
+    state that no life insurance activity was detected. Connect with life_cover_adequacy
+    to contextualize whether the user's transactional behavior aligns with their coverage
+    gap — e.g., low adequacy + no activity = growing risk exposure.
+  data:
+    - insurance_features.life_insurance
+    - life_cover_adequacy
+    - current_life_cover
+
+insurance_premium_discipline:
+  prompt: >
+    Use insurance_features.billing to generate one insight on insurance premium payment
+    discipline. Focus on cnt_insurance_bills_due vs cnt_insurance_bills_missed across
+    time windows. If bills_missed is consistently zero, describe strong payment discipline.
+    If missed bills exist in recent windows (c30, c60, c90), highlight the risk of policy
+    lapse due to non-payment and quantify how many bills were missed. Compare monthly
+    patterns (m0 through m6) to identify whether missed payments are a one-off or recurring.
+    Connect with amt_insurance_accounts_c180 to contextualize the premium quantum at risk.
+    If billing data is entirely absent or zero, state that no insurance billing activity
+    was detected.
+  data:
+    - insurance_features.billing
+
+insurance_portfolio_overview:
+  prompt: >
+    Use insurance_features.profile and insurance_features.policies to generate one insight
+    on the user's insurance portfolio composition. Describe how many policies are detected,
+    their types (health, life, term, etc.), premium amounts, and payment cycles. If
+    insurance_flag is true but policies have null values, note that a policy exists but
+    details are limited. Compare insurance_vintage and insurance_recency to assess how
+    long the user has been covered and how recently they paid. If insurance_flag is false
+    or all profile fields are null, state that no active insurance coverage was detected
+    in the transaction data. Frame any gap relative to the user's cover adequacy scores.
+  data:
+    - insurance_features.profile
+    - insurance_features.policies
+    - life_cover_adequacy
+    - health_cover_adequacy
+
+insurance_spend_trend:
+  prompt: >
+    Use category_spending_profile (the "insurance" category) to generate one insight on
+    how the user's insurance spending has changed over recent months. Compare spend_m0 and
+    aggregate_spends_m1_m3 against aggregate_spends_m4_m6 to identify whether insurance
+    premium payments are growing, stable, or declining. Quantify the amounts in INR.
+    If spending is lumpy (non-zero in some months, zero in others), identify the payment
+    cycle (quarterly, annual). If insurance category spend is zero across all months,
+    state that no insurance premium outflows were detected in the bank statement. Connect
+    with amt_insurance_accounts_c180 from billing data if available.
+  data:
+    - category_spending_profile
+    - insurance_features.billing

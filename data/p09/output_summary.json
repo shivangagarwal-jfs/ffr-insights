@@ -1,0 +1,91 @@
+{
+    "metadata": {
+        "request_id": "b3e1f7a2-4444-4bbb-9999-111111111109",
+        "timestamp": "2026-04-20T15:13:31.952806+00:00",
+        "version": "1.0.0",
+        "source": "pillar_summary_api",
+        "channel": "api"
+    },
+    "error": null,
+    "data": {
+        "metric_summaries_ui": {
+            "spend_to_income_ratio": "Well-managed spending leaves healthy room for savings and financial goals each month, a strong position to maintain consistently.",
+            "saving_consistency": "Your strong savings regularity provides a solid foundation for achieving financial milestones, despite a few months with travel or health spikes.",
+            "emergency_corpus": "The current emergency cushion is significantly below target, leaving you vulnerable to unexpected expenses without adequate protection.",
+            "emi_burden": "An elevated loan repayment load can strain your monthly budget, potentially limiting funds for savings and other financial goals.",
+            "credit_score": "An excellent credit score like yours opens doors to better loan terms and lower interest rates, saving you money on future borrowings.",
+            "life_insurance": "Well done – your life cover meets the recommended level, providing solid financial protection for your dependents.",
+            "health_insurance": "Your health cover meets the recommended level, offering good financial security against potential medical costs.",
+            "tax_filing_status": "Maintaining current tax filing ensures compliance and avoids potential penalties, forming the essential base for any further tax planning.",
+            "tax_savings": "Your current tax optimization suggests you might be missing opportunities to reduce your taxable income and enhance your overall savings potential.",
+            "investment_rate": "Increasing your investment rate is crucial for long-term wealth creation, helping you reach financial goals faster and build substantial assets.",
+            "portfolio_diversification": "A well-diversified portfolio helps spread risk across different asset classes, protecting your wealth from market volatility and enhancing stability.",
+            "portfolio_overlap": "Understanding fund overlap is vital to avoid unnecessary concentration risk and ensure your investments are truly diversified for optimal returns."
+        },
+        "metric_ctas": {
+            "spend_to_income_ratio": {
+                "text": "Keep tracking your expenses to maintain this healthy ratio.",
+                "action": "jio://spend/track"
+            },
+            "saving_consistency": {
+                "text": "Set up auto-debit to ensure consistent savings every month.",
+                "action": "jio://savings/auto-debit"
+            },
+            "emergency_corpus": {
+                "text": "Build your emergency fund to cover at least 6 months of expenses.",
+                "action": "jio://savings/emergency"
+            },
+            "emi_burden": {
+                "text": "Explore options to reduce your loan repayment burden.",
+                "action": "jio://loans/prepay"
+            },
+            "credit_score": {
+                "text": "Maintain your strong credit profile for future financial flexibility.",
+                "action": "jio://credit/report"
+            },
+            "life_insurance": {
+                "text": "Review your existing life cover to ensure it aligns with future needs.",
+                "action": "jio://insurance/life"
+            },
+            "health_insurance": {
+                "text": "Explore options to enhance your health cover for comprehensive protection.",
+                "action": "jio://insurance/health"
+            },
+            "tax_filing_status": {
+                "text": "Review your tax returns for accuracy and potential deductions.",
+                "action": "jio://tax/itr"
+            },
+            "tax_savings": {
+                "text": "Explore ELSS and PPF to boost your tax-saving investments.",
+                "action": "jio://invest/elss"
+            },
+            "investment_rate": {
+                "text": "Increase your monthly investment to accelerate wealth growth.",
+                "action": "jio://invest/sip"
+            },
+            "portfolio_diversification": {
+                "text": "Review your asset allocation to optimize for your goals.",
+                "action": "jio://invest/rebalance"
+            },
+            "portfolio_overlap": {
+                "text": "Check for fund overlap to ensure true portfolio diversification.",
+                "action": "jio://invest/overlap-check"
+            }
+        },
+        "overall_summary": {
+            "overview": "Your credit profile is exceptionally strong at 770, providing a solid financial base. However, building your emergency cushion and managing loan repayments are key priorities.",
+            "whats_going_well": [
+                "Your credit profile is exceptionally strong, opening doors to favorable loan terms and future financial flexibility.",
+                "Your life and health covers adequately protect your household and medical needs, providing solid security.",
+                "Your spending is well-managed at 65% of income, allowing room for financial goals.",
+                "Your investment portfolio is well-diversified across various asset classes, managing risk effectively."
+            ],
+            "whats_needs_attention": [
+                "Your emergency cushion is low at 1.7 months, leaving your household vulnerable to unexpected expenses.",
+                "Your loan repayment load is elevated at 31% of income, limiting funds for other financial goals.",
+                "There is meaningful headroom to enhance your tax efficiency and utilize available savings avenues.",
+                "Your investment commitment is in the early-stage category, needing an increase for faster wealth growth."
+            ]
+        }
+    }
+}

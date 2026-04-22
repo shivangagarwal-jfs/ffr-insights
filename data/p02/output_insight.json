@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "customer_id": "CUST-DEMO-PERSONA-P01-001",
+    "request_id": "b3e1f7a2-4444-4bbb-9999-111111111101",
+    "timestamp": "2026-04-14T10:00:00.000Z",
+    "version": "0.1"
+  },
+  "error": null,
+    "insights": {
+      "spending": [
+        {
+          "id": "spending_01",
+          "theme": "savings_buffer",
+          "headline": "Add ₹5,000 to savings monthly",
+          "description": "Your savings cover 2 months. Aim for 3–6 months to protect against sudden needs.",
+          "cta": "Save",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "spending_profile", "metric": "emergency_corpus", "value": 8500},
+              {"signal_group": "spending_profile", "metric": "ideal_emergency_corpus", "value": 45000}
+            ],
+            "explanation": "Emergency corpus at ₹8,500 against an ideal of ₹45,000 leaves a significant gap."
+          }
+        },
+        {
+          "id": "spending_02",
+          "theme": "idle_money",
+          "headline": "Put your idle money to work",
+          "description": "₹3,200 is sitting idle beyond your safety buffer. Investing can help grow money faster.",
+          "cta": "Start investing",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "spending_profile", "metric": "surplus_amount", "value": 3200}
+            ],
+            "explanation": "Idle funds above emergency needs could earn returns through simple investment vehicles."
+          }
+        },
+        {
+          "id": "spending_03",
+          "theme": "high_spending",
+          "headline": "Reduce high spending areas",
+          "description": "A large part of your spend is in food & groceries. Cutting just 10% here can save ₹1,200 yearly.",
+          "cta": "Review",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "monthly_spend", "metric": "top_category_spend", "value": 4200}
+            ],
+            "explanation": "Food & groceries is the highest spend category, making it a good target for optimization."
+          }
+        }
+      ],
+      "borrowing": [
+        {
+          "id": "borrowing_01",
+          "theme": "emi_management",
+          "headline": "Keep EMI burden under control",
+          "description": "Your EMI takes up 19% of income. Try to keep it below 20% for financial flexibility.",
+          "cta": "Review loans",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "borrowing_profile", "metric": "emi_burden_latest", "value": 0.19}
+            ],
+            "explanation": "EMI burden is near the manageable threshold but could tip over in low-income months."
+          }
+        },
+        {
+          "id": "borrowing_02",
+          "theme": "credit_score",
+          "headline": "Your credit score needs attention",
+          "description": "At 620, your credit score is below the good range. Timely payments can help improve it steadily.",
+          "cta": "Check score",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "borrowing_profile", "metric": "credit_score_latest", "value": 620}
+            ],
+            "explanation": "Credit score has been declining and is now in the fair range."
+          }
+        }
+      ],
+      "protection": [
+        {
+          "id": "protection_01",
+          "theme": "health_cover",
+          "headline": "Increase your health coverage",
+          "description": "Your health cover is at 42% of the recommended level. A top-up plan can bridge this gap affordably.",
+          "cta": "Explore plans",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "protection_profile", "metric": "health_cover_adequacy", "value": 0.42}
+            ],
+            "explanation": "Health coverage at ₹1.5L vs recommended ₹3.6L leaves significant exposure."
+          }
+        },
+        {
+          "id": "protection_02",
+          "theme": "life_cover",
+          "headline": "Your life cover has a large gap",
+          "description": "Current life cover is only 13% of what's recommended. Consider a term plan for affordable coverage.",
+          "cta": "Get covered",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "protection_profile", "metric": "life_cover_adequacy", "value": 0.13}
+            ],
+            "explanation": "Life cover at ₹2L vs recommended ₹15L creates a major protection gap."
+          }
+        }
+      ],
+      "wealth": [
+        {
+          "id": "wealth_01",
+          "theme": "investment_rate",
+          "headline": "Start investing more regularly",
+          "description": "Only 3% of your income goes to investments. Even small SIPs of ₹500 can compound over time.",
+          "cta": "Start SIP",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "wealth_profile", "metric": "investment_rate_latest", "value": 0.03}
+            ],
+            "explanation": "Investment rate is well below the recommended 15-20% range."
+          }
+        },
+        {
+          "id": "wealth_02",
+          "theme": "diversification",
+          "headline": "Diversify beyond fixed deposits",
+          "description": "65% of your portfolio is in FDs. Adding equity exposure can improve long-term returns significantly.",
+          "cta": "Explore funds",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "wealth_profile", "metric": "fd_allocation", "value": 65}
+            ],
+            "explanation": "Heavy FD allocation limits growth potential; equity exposure is only 8%."
+          }
+        }
+      ],
+      "tax": [
+        {
+          "id": "tax_01",
+          "theme": "filing",
+          "headline": "Start filing your income tax",
+          "description": "Tax filing is not done yet. Filing on time avoids penalties and builds your financial record.",
+          "cta": "File now",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "tax_profile", "metric": "tax_filing_status", "value": "No"}
+            ],
+            "explanation": "Tax filing status is 'No', indicating returns have not been filed."
+          }
+        },
+        {
+          "id": "tax_02",
+          "theme": "deductions",
+          "headline": "Claim available tax deductions",
+          "description": "You're not using any tax-saving instruments. EPF, ELSS, or PPF can reduce your tax outgo.",
+          "cta": "See options",
+          "evidence": {
+            "datapoints": [
+              {"signal_group": "tax_profile", "metric": "tax_saving_index", "value": 0}
+            ],
+            "explanation": "Zero tax-saving instruments availed out of 5 possible options."
+          }
+        }
+      ]
+    }
+}

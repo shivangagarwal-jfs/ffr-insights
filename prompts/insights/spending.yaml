@@ -1,0 +1,188 @@
+spend_pressure:
+  prompt: >
+    Use monthly_spend and spend_to_income_ratio to identify one insight on spending pressure.
+    Focus on months where spend_to_income_ratio approaches or exceeds 1, and quantify how often
+    the user is spending most or more than their income. Highlight whether this is a recurring pattern
+    or isolated spikes, and explain the practical implication on financial stability.
+    Avoid generic statements and use actual month-level comparisons.
+    Do not comment on savings rate, surplus trajectory, or saving consistency — focus only on the
+    spend-to-income ratio level and how often it approaches or exceeds 1.
+  data:
+    - monthly_spend
+    - spend_to_income_ratio
+
+discretionary_vs_essential:
+  prompt: >
+    Use the essential and discretionary spending totals to generate one insight comparing the two.
+    Compare total_essential_spend versus total_discretionary_spend across recent (m1_m3) and older (m4_m6) periods.
+    Quantify the gap in INR and describe whether the user is skewed toward necessity-driven spending or lifestyle-driven spending.
+    Highlight any shift in mix between the two periods.
+    If essential spending dominates, note that flexibility for discretionary adjustment may be limited.
+    If discretionary spending is disproportionately high relative to total spend, quantify the excess
+    and explain the potential inefficiency.
+  data:
+    - category_spending_profile.total_essential_spend
+    - category_spending_profile.total_discretionary_spend
+
+top_spend_and_trend:
+  prompt: >
+    Use category_spending_profile to produce one insight covering both spending concentration and trend shift.
+    First, identify the top 2-3 categories driving most spending using aggregate_spends_m1_m3 and quantify
+    their contribution relative to total spend. Do not mention percentages, only amounts in INR.
+    Then, compare aggregate_spends_m1_m3 versus aggregate_spends_m4_m6 for these top categories to detect
+    whether their dominance is growing, shrinking, or stable. Quantify the change in INR.
+    If the shifting category is discretionary (e.g., entertainment, shopping, food delivery, hospitality),
+    frame it as lifestyle inflation. If essential (e.g., grocery, utilities, fuel, commute), frame it as
+    cost-of-living pressure. If no meaningful change exists, state that category-level spending has been stable.
+    If spending is fragmented across many small categories, explicitly state that concentration is low.
+  data:
+    - category_spending_profile
+
+small_ticket_leakage:
+  prompt: >
+    Use upi_features to identify one insight on small but frequent expenses.
+    Focus on UPI transaction counts, total amounts, and average ticket sizes to explain whether
+    repeated small spends are adding up meaningfully. Quantify the contribution in INR where possible.
+    If average ticket size is low but transaction count is high, highlight the cumulative impact.
+  data:
+    - upi_features
+  
+merchant_dependency:
+  prompt: >
+    Use expense_profile_merchants to identify whether the user is highly dependent on a few merchants.
+    Focus on merchants with the highest transaction amounts or counts, and quantify their contribution
+    relative to overall merchant spending. Highlight if one category (e.g., food delivery, e-commerce)
+    is dominated by a single platform. If merchant data is sparse, clearly state that dependency cannot be assessed.
+  data:
+    - expense_profile_merchants
+
+impulse_spending_pattern:
+  prompt: >
+    Use periodic_spike to identify one insight on impulsive or unplanned spending behavior.
+    Focus on late-night or weekend spending patterns and whether post-salary or pre-salary
+    concentration suggests bursts of unplanned spending. Describe whether spending appears
+    more impulsive in recent periods (c30) compared to longer-term behavior (c90).
+    Do not quote exact percentages; only describe direction and intensity.
+  data:
+    - periodic_spike
+
+subscription_features:
+  prompt: >
+    Use subscription_features to generate one insight on recurring-payment exposure.
+    Prioritize total subscription amount, subscription count, and category-level redundant subscription indicators
+    such as streaming, music, e-commerce, productivity, food delivery, premium apps, and merchant tools.
+    Mention provider or service names only if present in the data. Frame the insight as a review opportunity,
+    especially if multiple subscriptions or redundant categories exist. Never recommend canceling outright;
+    only suggest reviewing unused or overlapping subscriptions. If all values are null or zero, say the user
+    does not appear to have meaningful recurring subscription exposure in the available data.
+  data:
+    - subscription_features
+
+liquidity_resilience:
+  prompt: >
+    Use account_overview, liquid_instruments, and saving_consistency to assess short-term resilience.
+    Focus on whether the user has enough usable balance across accounts to handle near-term spending shocks.
+    Compare average balance, latest balance, and liquid holdings, and identify whether resilience depends on one account
+    or several. Do not comment on the concentration risk if one bank account dominates. Can compare with other instruments FDs, MFs if needed etc.
+  data:
+    - account_overview
+    - liquid_instruments
+    - saving_consistency
+
+bill_payments:
+  prompt: >
+    Analyze bill_profile to generate one insight on bill discipline and payment risk.
+    Compare bill_detail_m1 through bill_detail_m4, and focus on status patterns such as bill_paid,
+    bill_overdue, or missing records. Look for repeated overdue behavior, bill amount stability, and whether
+    the user appears to pay core bills on time. Quantify the amounts and mention the provider and bill category
+    when helpful. If recent months are missing, use the latest available history and clearly state that recency
+    is limited. Produce one actionable insight about reliability, slippage, or consistency.
+  data:
+    - bill_profile
+
+savings_rate_trend:
+  prompt: >
+    Use monthly_income, monthly_spend, and saving_consistency to generate one insight on the user's savings rate
+    and its trajectory. Compute the implicit monthly surplus (income minus spend) for each available month
+    and express the savings rate as a fraction of income. Identify whether the savings rate is improving,
+    declining, or erratic across recent months compared to older months. Combine with saving_consistency
+    (1 = surplus month, 0 = deficit month) to quantify how many of the last 6-12 months produced a surplus.
+    Quantify the average monthly surplus or deficit in INR and frame the insight around the trend direction
+    and what sustaining or reversing it could mean over the next few months.
+    Do not re-state the spend-to-income ratio or spending pressure — focus only on the monthly surplus
+    or deficit amount in INR, the savings rate as a fraction of income, and the trend direction across months.
+  data:
+    - monthly_income
+    - monthly_spend
+    - saving_consistency
+
+emergency_corpus_gap:
+  prompt: >
+    Use emergency_corpus, ideal_emergency_corpus, and monthly_spend to generate one insight on emergency fund adequacy.
+    Compare the user's actual emergency corpus to the ideal benchmark and express the gap in INR and in
+    months-of-spending coverage (emergency_corpus divided by average monthly spend). If the corpus covers
+    fewer than 3 months of spending, highlight the shortfall. If the corpus is close to or above the ideal,
+    acknowledge the strength. Do not use judgmental terms like "inadequate" — frame as data
+    (e.g., "Current buffer covers X months of average spending vs. the Y-month benchmark").
+    If emergency_corpus or ideal_emergency_corpus is zero or missing, state that emergency fund data
+    is not available.
+  data:
+    - emergency_corpus
+    - ideal_emergency_corpus
+    - monthly_spend
+
+income_spend_volatility:
+  prompt: >
+    Use monthly_income, monthly_spend, and income_features to identify one insight on income and spending volatility.
+    Compare the month-over-month variability of income against the month-over-month variability of spend.
+    Quantify the range (highest minus lowest month) for both income and spend in INR.
+    Cover whichever scenario the data supports:
+    (a) Income volatile, spend rigid — fixed expenses persist through low-income months, creating recurring
+    deficits; highlight the structural risk. (b) Income stable, spend volatile — unpredictable spending
+    makes budgeting difficult; quantify the swing and call out planning difficulty. (c) Both stable — no
+    volatility concern; explicitly state this.
+    Use calculated_income_profession_type if available to contextualize — gig, freelance, or seasonal earners
+    face scenario (a) more acutely than salaried professionals.
+    Do not comment on the spend-to-income ratio level or savings rate — focus strictly on variability.
+  data:
+    - monthly_income
+    - monthly_spend
+    - income_features
+
+salary_cycle_behavior:
+  prompt: >
+    Use periodic_spike to identify one insight on salary-cycle spending behavior.
+    Focus on post_salary_spend_pct and pre_salary_spend_pct across c30 and c90 windows.
+    If post-salary concentration is high, describe whether the user tends to spend heavily right after
+    receiving income, potentially leaving less for the rest of the month. If pre-salary concentration is high,
+    describe whether spending bunches up just before the next paycheck, suggesting cash-flow tightness.
+    Compare the c30 window to c90 to detect whether this pattern is intensifying or stable.
+    If both post_salary and pre_salary values are null or negligible, state that salary-cycle
+    concentration is not evident in the data.
+  data:
+    - periodic_spike
+
+credit_channel_exposure:
+  prompt: >
+    Use the credit card and pay-later spending data to identify one insight on credit channel exposure.
+    Compare aggregate_spends_m1_m3 versus aggregate_spends_m4_m6 for each to detect whether
+    reliance on borrowed-money spending channels is growing.
+    Quantify the recent period amount in INR and the change from the prior period.
+    If both categories have zero or negligible spend, explicitly state that the user does not appear
+    to rely on credit-based spending channels. Do not recommend specific products or label behavior
+    as irresponsible — frame as a factual trend observation.
+  data:
+    - category_spending_profile.credit_card
+    - category_spending_profile.paylater
+
+cash_withdrawal_pattern:
+  prompt: >
+    Use the ATM spending data to identify one insight on cash withdrawal behavior.
+    Compare spend_m0 and aggregate_spends_m1_m3 versus aggregate_spends_m4_m6 to detect
+    whether cash withdrawals are rising, falling, or stable.
+    Quantify the amounts in INR. High or growing ATM usage may indicate spending that falls
+    outside digital tracking, reducing overall visibility into where money goes.
+    If ATM spend is zero or negligible, state that the user's spending is predominantly digital
+    and well-tracked.
+  data:
+    - category_spending_profile.atm

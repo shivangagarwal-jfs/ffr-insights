@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "customer_id": "CUST-DEMO-PERSONA-P01-001",
+    "request_id": "b3e1f7a2-4444-4bbb-9999-111111111101",
+    "timestamp": "2026-04-14T10:00:00.000Z",
+    "version": "0.1"
+  },
+  "error": null,
+  "data": {
+      "spending": [
+            {
+                "id": "spending_01",
+                "theme": "spend_pressure",
+                "headline": "Review January Spending",
+                "description": "Your spending reached 95% of your income in January, leaving little for other goals. Reducing this pressure can improve financial stability.",
+                "cta": "Analyze January Outgo"
+            },
+            {
+                "id": "spending_02",
+                "theme": "discretionary_vs_essential",
+                "headline": "Manage Discretionary Spending",
+                "description": "Your discretionary spending rose by ₹91,845 in the last three months, now 47% of total. Adjusting this can free up funds.",
+                "cta": "Review lifestyle expenses"
+            },
+            {
+                "id": "spending_03",
+                "theme": "top_spend_and_trend",
+                "headline": "Review Travel Spending",
+                "description": "Travel spending rose by ₹52,390 over the last three months compared to the prior period. Reviewing this discretionary increase can free up funds.",
+                "cta": "Analyze Travel Expenses"
+            },
+            {
+                "id": "spending_04",
+                "theme": "small_ticket_leakage",
+                "headline": "Reduce UPI Frequency",
+                "description": "Your average of 48 UPI transactions monthly, totaling ₹2.85 Lakh, represents a significant outflow. Reducing just 5 transactions could free up nearly ₹30,000 monthly.",
+                "cta": "Review UPI Habits"
+            },
+            {
+                "id": "spending_05",
+                "theme": "merchant_dependency",
+                "headline": "Optimize Travel Costs",
+                "description": "Your ₹65,000 spending with a single travel platform in the last 30 days represents 7.1% of your total expenses, suggesting an opportunity to compare options.",
+                "cta": "Compare Travel Platforms"
+            },
+            {
+                "id": "spending_06",
+                "theme": "impulse_spending_pattern",
+                "headline": "Manage Late-Night Outflows",
+                "description": "Your late-night spending has recently increased by 20% compared to previous months. Reducing this shift could help manage unplanned outflows.",
+                "cta": "Track Late-Night Spends"
+            },
+            {
+                "id": "spending_07",
+                "theme": "subscription_features",
+                "headline": "Review Streaming Subscriptions",
+                "description": "With 1 of your 3 streaming subscriptions identified as potentially redundant, reviewing it could reduce your total annual subscription spend of ₹84,000.",
+                "cta": "Review Streaming Services"
+            },
+            {
+                "id": "spending_08",
+                "theme": "liquidity_resilience",
+                "headline": "Enhance Saving Consistency",
+                "description": "Your saving consistency is 6 out of the last 12 months. Increasing this habit can help you build even stronger liquid reserves beyond your current ₹19.3 Lakh.",
+                "cta": "Save More Regularly"
+            },
+            {
+                "id": "spending_09",
+                "theme": "bill_payments",
+                "headline": "Automate Bill Payments",
+                "description": "Consistently paying your phone, electricity, and broadband bills 9 to 14 days early is excellent. Automating them maintains this discipline and prevents future missed deadlines.",
+                "cta": "Set up auto-pay"
+            },
+            {
+                "id": "spending_10",
+                "theme": "savings_rate_trend",
+                "headline": "Boost Savings Consistency",
+                "description": "Your monthly surplus has varied, with 6 of 12 months showing a surplus. Consistently achieving your latest ₹220,000 could add ₹168,000 to your savings in three months.",
+                "cta": "Plan Consistent Savings"
+            },
+            {
+                "id": "spending_11",
+                "theme": "emergency_corpus_gap",
+                "headline": "Boost Emergency Fund",
+                "description": "Your emergency fund covers about 1.4 months of average spending, compared to the 8.3-month benchmark. Increasing your fund by ₹60 Lakh could provide an additional 6.9 months of coverage.",
+                "cta": "Grow Emergency Savings"
+            },
+            {
+                "id": "spending_12",
+                "theme": "income_spend_volatility",
+                "headline": "Manage Income Swings",
+                "description": "Your monthly income varied by ₹3.6 Lakh, while spending fluctuated by ₹1.4 Lakh. Building a buffer can help manage income swings.",
+                "cta": "Build Income Buffer"
+            },
+            {
+                "id": "spending_13",
+                "theme": "salary_cycle_behavior",
+                "headline": "Reallocate Salary Spending",
+                "description": "15% of your recent spending occurs right after salary; spreading this out can provide more financial flexibility throughout the month.",
+                "cta": "Plan Monthly Budget"
+            },
+            {
+                "id": "spending_14",
+                "theme": "credit_channel_exposure",
+                "headline": "Maintain Low Credit",
+                "description": "With ₹0 spent via credit cards or pay-later services in the last six months, you show no reliance on borrowed funds.",
+                "cta": "Continue Prudent Spending"
+            },
+            {
+                "id": "spending_15",
+                "theme": "cash_withdrawal_pattern",
+                "headline": "Track Cash Spending",
+                "description": "Your cash withdrawals increased by ₹23,000 over the last three months compared to the prior three, making it harder to track your overall spending.",
+                "cta": "Review ATM Use"
+            }
+        ],
+        "borrowing": [],
+        "protection": [],
+        "wealth": [],
+        "tax": []
+    }
+  }

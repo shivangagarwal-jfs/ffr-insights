@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jio Financial Health</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --green: #2DA94F;
+  --green-light: #D1FAE5;
+  --orange: #F59E0B;
+  --orange-light: #FEF3C7;
+  --orange-dark: #92400E;
+  --red: #EF4444;
+  --purple: #6D28D9;
+  --purple-light: #F3F0FF;
+  --purple-mid: #7C3AED;
+  --purple-soft: #C084FC;
+  --purple-area: #EDE9FE;
+  --blue: #3B82F6;
+  --blue-light: #DBEAFE;
+  --navy: #1E3A5F;
+  --charcoal: #1F2937;
+  --gold: #FBBF24;
+  --bg: #F9FAFB;
+  --white: #FFFFFF;
+  --card-shadow: rgba(0,0,0,0.06);
+  --text-primary: #1A1A1A;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  --border: #E5E7EB;
+  --track: #E5E7EB;
+  --sheet-text: #374151;
+  --overlay: rgba(0,0,0,0.3);
+  --handle: #D1D5DB;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--white);
+  padding: 12px 20px 0;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.jio-logo { font-weight: 800; font-size: 22px; color: var(--text-primary); }
+.jio-logo span { color: var(--purple); }
+.header-icons { display: flex; gap: 16px; align-items: center; }
+.header-icon { width: 24px; height: 24px; color: var(--text-primary); cursor: pointer; }
+.user-select-wrap { position: relative; }
+.user-select {
+  padding: 6px 28px 6px 10px;
+  border: 1.5px solid var(--purple);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--purple);
+  background: var(--purple-light);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.user-select-wrap::after {
+  content: '▾';
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--purple); font-size: 12px; pointer-events: none;
+}
+.tabs { display: flex; gap: 24px; }
+.tab {
+  padding: 8px 0; font-size: 15px; font-weight: 500;
+  color: var(--text-tertiary); border-bottom: 2px solid transparent; cursor: pointer;
+}
+.tab.active { color: var(--text-primary); font-weight: 700; border-bottom-color: var(--text-primary); }
+
+/* ── Main view container ── */
+.main-view { display: block; }
+.detail-view { display: none; }
+.detail-view.active { display: block; }
+.main-view.hidden { display: none; }
+
+/* ── Score Gauge ── */
+.score-section {
+  background: var(--white);
+  padding: 32px 20px 20px;
+  text-align: center;
+}
+.gauge-container { position: relative; width: 220px; height: 220px; margin: 0 auto 8px; }
+.gauge-canvas { width: 220px; height: 220px; }
+.gauge-center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  text-align: center;
+}
+.gauge-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
+.gauge-value { font-size: 48px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+.gauge-rating {
+  font-size: 15px; font-weight: 600; color: var(--text-primary);
+  margin-top: 8px; cursor: pointer;
+}
+.gauge-rating::after { content: ' ›'; }
+.updated-date { font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
+
+/* ── Improvement Banner ── */
+.improve-banner {
+  background: var(--charcoal);
+  margin: 0 20px;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.banner-sparkle { font-size: 20px; flex-shrink: 0; }
+.banner-text h4 { color: var(--white); font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.banner-text p { color: var(--handle); font-size: 13px; line-height: 1.4; }
+
+/* ── Ways to Improve Row ── */
+.ways-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+}
+.ways-badge {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--purple); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.ways-label { flex: 1; font-size: 15px; font-weight: 600; }
+.ways-arrow { color: var(--text-secondary); font-size: 18px; }
+
+/* ── Pillar Cards ── */
+.pillar-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; padding: 0 20px 12px;
+}
+.pillar-card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--card-shadow);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.pillar-card:hover { transform: translateY(-2px); }
+.pillar-card.full-width { grid-column: 1 / -1; }
+.pillar-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.pillar-name { font-size: 15px; font-weight: 700; }
+.pillar-arrow { color: var(--text-tertiary); font-size: 14px; }
+.pillar-snippet { font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px; }
+.mini-gauge-wrap { position: relative; width: 64px; height: 64px; }
+.mini-gauge-wrap canvas { width: 64px; height: 64px; }
+.mini-gauge-value {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 16px; font-weight: 800;
+}
+
+/* ── For You Section ── */
+.section-heading {
+  padding: 24px 20px 4px;
+  font-size: 18px; font-weight: 800;
+}
+.section-heading::after { content: ' ›'; color: var(--text-secondary); }
+.section-sub { padding: 0 20px 12px; font-size: 13px; color: var(--text-secondary); }
+.promo-card {
+  margin: 0 20px 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1a1040 0%, #2d1b69 100%);
+  padding: 24px;
+  color: var(--white);
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+}
+.promo-logo { font-weight: 800; font-size: 18px; margin-bottom: 16px; }
+.promo-badge {
+  position: absolute; top: 16px; right: 16px;
+  background: var(--purple); color: var(--white);
+  font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;
+}
+.promo-title { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 12px; }
+.promo-sub { font-size: 12px; color: #ccc; margin-bottom: 4px; }
+.promo-source { font-size: 11px; color: #999; }
+.promo-cta {
+  position: absolute; bottom: 20px; right: 20px;
+  background: var(--green); color: var(--white);
+  border: none; border-radius: 20px; padding: 8px 20px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.dot-indicators { text-align: center; padding: 8px 0; }
+.dot-indicators span {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--handle); margin: 0 4px;
+}
+.dot-indicators span.active { background: var(--purple); }
+
+/* ── More Section ── */
+.more-section { padding: 12px 20px; }
+.more-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+.more-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.more-row:last-child { border-bottom: none; }
+.more-icon {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--purple-light); color: var(--purple);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.more-info { flex: 1; }
+.more-info h5 { font-size: 14px; font-weight: 600; }
+.more-info p { font-size: 12px; color: var(--text-secondary); }
+.more-arrow { color: var(--text-tertiary); }
+
+/* ── Bottom Sheet ── */
+.sheet-overlay {
+  position: fixed; inset: 0;
+  background: var(--overlay);
+  z-index: 200;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet-overlay.open { display: flex; }
+.sheet {
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 430px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px 20px 32px;
+  animation: sheetUp 0.3s ease-out;
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.sheet-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: var(--handle);
+  margin: 0 auto 16px;
+}
+.sheet h3 { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.sheet h4 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.sheet p { font-size: 14px; color: var(--sheet-text); line-height: 1.6; margin-bottom: 12px; }
+.sheet ul { padding-left: 20px; margin-bottom: 12px; }
+.sheet li { font-size: 14px; color: var(--sheet-text); line-height: 1.6; margin-bottom: 4px; }
+
+/* ── Ways to Improve Page ── */
+.wti-page { background: var(--white); min-height: 100vh; }
+.wti-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.back-btn {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--white); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px;
+}
+.wti-header h2 { font-size: 20px; font-weight: 800; flex: 1; }
+.wti-tabs {
+  display: flex; gap: 4px; padding: 12px 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+}
+.wti-tabs::-webkit-scrollbar { display: none; }
+.wti-tab {
+  padding: 6px 12px; font-size: 13px; font-weight: 500;
+  color: var(--text-tertiary); white-space: nowrap; cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.wti-tab.active { color: var(--text-primary); font-weight: 700; border-bottom-color: var(--text-primary); }
+.wti-cards { padding: 16px 20px; }
+.insight-card {
+  border-left: 3px solid var(--border);
+  padding: 16px; margin-bottom: 16px;
+  border-radius: 0 8px 8px 0;
+  background: var(--white);
+}
+.insight-badge {
+  display: inline-block;
+  font-size: 12px; font-weight: 700;
+  color: var(--purple); background: var(--purple-light);
+  padding: 2px 8px; border-radius: 4px;
+  margin-bottom: 8px;
+}
+.insight-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.insight-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px; }
+.insight-cta {
+  display: inline-block;
+  background: var(--purple); color: var(--white);
+  border: none; border-radius: 20px;
+  padding: 6px 16px; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+}
+.insight-feedback { display: inline-flex; gap: 12px; margin-left: 12px; vertical-align: middle; }
+.insight-feedback span { cursor: pointer; font-size: 16px; }
+
+/* ── Pillar Detail Page ── */
+.detail-page { background: var(--bg); min-height: 100vh; }
+.detail-top {
+  background: var(--white);
+  padding: 16px 20px;
+  display: flex; align-items: flex-start; gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.detail-back {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--white); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px; flex-shrink: 0; margin-top: 4px;
+}
+.detail-title-area { flex: 1; }
+.detail-title {
+  font-size: 24px; font-weight: 800; margin-bottom: 4px;
+  cursor: pointer;
+}
+.detail-title .info-icon { font-size: 14px; color: var(--text-tertiary); vertical-align: super; }
+.detail-subtitle { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+.detail-gauge { width: 56px; height: 56px; position: relative; flex-shrink: 0; }
+.detail-gauge canvas { width: 56px; height: 56px; }
+.detail-gauge-val {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 16px; font-weight: 800;
+}
+
+.detail-body { padding: 16px 20px; }
+
+.metric-card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px var(--card-shadow);
+}
+.metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.metric-name { font-size: 16px; font-weight: 700; }
+.metric-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px; }
+.metric-big-value { font-size: 36px; font-weight: 800; margin-bottom: 12px; }
+.chart-wrap { position: relative; height: 200px; margin-bottom: 8px; }
+.chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+.ai-insight {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 12px 0; margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.ai-insight .sparkle { color: var(--purple); font-size: 16px; flex-shrink: 0; }
+.ai-insight p { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
+
+/* Month circles for saving consistency */
+.month-circles {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; padding: 16px 0; justify-items: center;
+}
+.month-circle {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--white);
+}
+.month-circle.saved { background: var(--purple); }
+.month-circle.not-saved { background: var(--purple-soft); }
+.month-circle.no-data { background: var(--handle); color: var(--text-secondary); }
+.month-circle.current { box-shadow: 0 0 0 3px var(--purple), 0 0 0 5px var(--purple-light); }
+.month-legend {
+  display: flex; gap: 16px; justify-content: center;
+  font-size: 11px; color: var(--text-secondary); margin: 8px 0 4px;
+}
+
+/* Coverage bars */
+.coverage-bars { display: flex; align-items: flex-end; gap: 20px; justify-content: center; margin: 20px 0; height: 180px; }
+.bar-group { text-align: center; }
+.bar-item { display: flex; flex-direction: column; align-items: center; }
+.bar-label-top { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.bar {
+  width: 100px; border-radius: 8px 8px 0 0;
+  transition: height 0.5s ease;
+}
+.bar.current { background: var(--purple-soft); }
+.bar.recommended { background: var(--purple); }
+.coverage-legend { display: flex; gap: 20px; justify-content: center; margin: 12px 0; font-size: 12px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+/* Tax detail */
+.tax-info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.tax-info-row .label { color: var(--text-secondary); }
+.tax-info-row .val { font-weight: 600; }
+.deduction-list { margin-top: 12px; }
+.deduction-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0; font-size: 13px;
+}
+.deduction-item .check { color: var(--green); }
+.deduction-item .cross { color: var(--text-tertiary); }
+
+/* Score Trend Section */
+.trend-section { background: var(--white); padding: 20px; margin: 0 0 16px; }
+.trend-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.trend-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+.trend-banner {
+  background: var(--navy);
+  border-radius: 12px; padding: 16px;
+  margin: 16px 0; color: var(--white);
+}
+.trend-banner h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.trend-banner p { font-size: 12px; color: var(--handle); line-height: 1.4; margin-bottom: 8px; }
+.trend-banner-btn {
+  background: transparent; border: 1px solid var(--white); color: var(--white);
+  border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.improved-list { padding: 16px 0; }
+.improved-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.improved-icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--white); flex-shrink: 0;
+}
+.improved-item h5 { font-size: 14px; font-weight: 600; }
+.improved-item p { font-size: 12px; color: var(--text-secondary); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--handle); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ════════ HEADER ════════ -->
+<div class="header">
+  <div class="header-top">
+    <div class="jio-logo"><span>Jio</span></div>
+    <div class="header-icons">
+      <div class="user-select-wrap">
+        <select id="userSelect" class="user-select"></select>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" style="color:var(--text-tertiary)">Manage</div>
+    <div class="tab active">Health</div>
+  </div>
+</div>
+
+<!-- ════════ MAIN VIEW ════════ -->
+<div id="mainView" class="main-view">
+
+  <!-- Score Gauge -->
+  <div class="score-section">
+    <div class="gauge-container">
+      <canvas id="mainGauge" class="gauge-canvas" width="220" height="220"></canvas>
+      <div class="gauge-center">
+        <div class="gauge-label">Rating</div>
+        <div class="gauge-value" id="mainScoreVal">--</div>
+      </div>
+    </div>
+    <div class="gauge-rating" id="mainRating">--</div>
+    <div class="updated-date" id="updatedDate"></div>
+  </div>
+
+  <!-- Improvement Banner -->
+  <div class="improve-banner" id="improveBanner" style="cursor:pointer;">
+    <div class="banner-sparkle">✨</div>
+    <div class="banner-text">
+      <h4 id="bannerTitle"></h4>
+      <p id="bannerBody"></p>
+    </div>
+  </div>
+
+  <!-- Ways to Improve Row -->
+  <div class="ways-row" id="waysRow">
+    <div class="ways-badge" id="waysBadge">--</div>
+    <div class="ways-label">Ways to improve</div>
+    <div class="ways-arrow">›</div>
+  </div>
+
+  <!-- Pillar Cards -->
+  <div class="pillar-grid" id="pillarGrid"></div>
+
+
+  <!-- For You -->
+  <div class="section-heading">For you</div>
+  <div class="section-sub">Smart picks based on your score</div>
+  <div class="promo-card">
+    <div class="promo-logo">Jio</div>
+    <div class="promo-badge">Recommended</div>
+    <div class="promo-title">Boost your<br>Protection score</div>
+    <div class="promo-sub">Acko Insurance</div>
+    <div class="promo-source">Based on your Protection report</div>
+    <button class="promo-cta">Explore</button>
+  </div>
+  <div class="dot-indicators">
+    <span class="active"></span><span></span><span></span>
+  </div>
+
+  <!-- More -->
+  <div class="more-section">
+    <div class="more-title">More</div>
+    <div class="more-row">
+      <div class="more-icon">⚙</div>
+      <div class="more-info"><h5>Data & consent</h5><p>Manage, add, remove or sync data</p></div>
+      <div class="more-arrow">›</div>
+    </div>
+    <div class="more-row">
+      <div class="more-icon">?</div>
+      <div class="more-info"><h5>Commonly asked questions</h5><p>Get answers on your report</p></div>
+      <div class="more-arrow">›</div>
+    </div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+
+<!-- ════════ WAYS TO IMPROVE VIEW ════════ -->
+<div id="wtiView" class="detail-view wti-page">
+  <div class="wti-header">
+    <div class="back-btn" onclick="showMain()">‹</div>
+    <h2>Ways to improve</h2>
+  </div>
+  <div class="wti-tabs" id="wtiTabs"></div>
+  <div class="wti-cards" id="wtiCards"></div>
+</div>
+
+<!-- ════════ PILLAR DETAIL VIEW ════════ -->
+<div id="detailView" class="detail-view detail-page">
+  <div class="detail-top">
+    <div class="detail-back" onclick="showMain()">‹</div>
+    <div class="detail-title-area">
+      <div class="detail-title" id="detailTitle" onclick="openPillarSheet()">
+        <span id="detailTitleText"></span> <span class="info-icon">ⓘ</span>
+      </div>
+      <div class="detail-subtitle" id="detailSubtitle"></div>
+    </div>
+    <div class="detail-gauge">
+      <canvas id="detailGaugeCanvas" width="56" height="56"></canvas>
+      <div class="detail-gauge-val" id="detailGaugeVal"></div>
+    </div>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- ════════ SUMMARY BOTTOM SHEET ════════ -->
+<div class="sheet-overlay" id="summarySheet" onclick="closeSheet('summarySheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <h3>Summary</h3>
+    <h4 id="sheetTitle"></h4>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- ════════ PILLAR BOTTOM SHEET ════════ -->
+<div class="sheet-overlay" id="pillarSheet" onclick="closeSheet('pillarSheet')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <h3 id="pillarSheetTitle"></h3>
+    <div id="pillarSheetBody"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   State & Config
+   ══════════════════════════════════════════ */
+let INPUT = null, SUMMARY = null, INSIGHT = null;
+let chartInstances = {};
+const PILLARS = ['spending','borrowing','wealth','protection','tax'];
+const PILLAR_LABELS = {spending:'Spending',borrowing:'Borrowing',wealth:'Wealth',protection:'Protection',tax:'Taxes'};
+const PILLAR_SCORE_KEYS = {spending:'spending_score',borrowing:'borrowing_score',wealth:'wealth_score',protection:'protection_score',tax:'tax_score'};
+const PILLAR_TAGLINES = {
+  spending: 'Track your spending habits and stay within your budget.',
+  borrowing: 'Keep your EMIs and credit usage in control to reduce interest and improve.',
+  wealth: 'Grow your investments and build long-term financial security.',
+  protection: 'Check if you\'re financially protected.',
+  tax: 'Track deductions, filing and savings opportunities for your income.'
+};
+const PILLAR_DESCRIPTIONS = {
+  spending: {
+    title: 'What is spending?',
+    body: 'Spending is how you use your income for daily needs, bills, and lifestyle choices. This includes groceries, utilities, entertainment, and other regular expenses.',
+    points: [
+      'Understanding your spending helps you identify areas to save more.',
+      'A healthy spending ratio means you\'re living within your means.',
+      'Tracking spending patterns helps build better financial habits over time.'
+    ]
+  },
+  borrowing: {
+    title: 'What is borrowing?',
+    body: 'Borrowing is when you take funds from a lender with the agreement to repay it later, often with interest. This includes loans, credit cards, and lines of credit.',
+    points: [
+      'Understanding borrowing helps you make informed decisions, manage debt, and leverage credit for financial goals.',
+      'Effective borrowing can improve your credit score and unlock opportunities.',
+      'Keeping EMI burden low ensures you have enough cashflow for savings and investments.'
+    ]
+  },
+  wealth: {
+    title: 'What is wealth?',
+    body: 'Wealth represents your accumulated financial assets and investments that grow over time. This includes mutual funds, stocks, fixed deposits, and other instruments.',
+    points: [
+      'Building wealth requires consistent investing over time.',
+      'Diversifying your portfolio reduces risk and improves long-term returns.',
+      'Even small regular investments can compound into significant wealth.'
+    ]
+  },
+  protection: {
+    title: 'What is protection?',
+    body: 'Protection refers to financial safety nets like insurance that shield you and your family from unexpected events. This includes health insurance, life insurance, and critical illness cover.',
+    points: [
+      'Adequate health cover protects against large medical bills.',
+      'Life cover ensures your family\'s financial security.',
+      'Reviewing coverage regularly keeps your protection up to date with changing needs.'
+    ]
+  },
+  tax: {
+    title: 'What is tax?',
+    body: 'Tax refers to the mandatory contributions you make to the government from your income. Managing your taxes well means using legal deductions and exemptions to reduce your tax outgo.',
+    points: [
+      'Filing taxes on time avoids penalties and builds your financial record.',
+      'Using available deductions under 80C, 80D, and NPS can significantly reduce taxable income.',
+      'Choosing the right tax regime (Old vs New) can save you money based on your deductions.'
+    ]
+  }
+};
+
+function scoreColor(s) { return s >= 60 ? '#2DA94F' : s >= 30 ? '#F59E0B' : '#EF4444'; }
+function ratingLabel(s) {
+  if (s >= 80) return 'Doing great';
+  if (s >= 60) return 'Good';
+  if (s >= 40) return 'Needs improvement';
+  return 'Needs attention';
+}
+function statusBadge(s) {
+  return '';
+}
+function fmtINR(v) {
+  if (v >= 10000000) return '₹' + (v/10000000).toFixed(1) + 'Cr';
+  if (v >= 100000) return '₹' + (v/100000).toFixed(1) + 'L';
+  if (v >= 1000) return '₹' + (v/1000).toFixed(0) + 'K';
+  return '₹' + v;
+}
+function firstSentence(t) { return (t||'').split(/[.\n]/)[0] + '.'; }
+function monthLabel(m) {
+  const d = new Date(m);
+  return d.toLocaleDateString('en-IN',{month:'short'});
+}
+function destroyCharts() { Object.values(chartInstances).forEach(c => c.destroy()); chartInstances = {}; }
+
+/* ══════════════════════════════════════════
+   Data Loading
+   ══════════════════════════════════════════ */
+async function loadUsers() {
+  const res = await fetch(`data/users.json?t=${Date.now()}`);
+  const users = await res.json();
+  const sel = document.getElementById('userSelect');
+  sel.innerHTML = '';
+  users.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.id; o.textContent = u.label;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', () => loadUser(sel.value));
+  await loadUser(users[0].id);
+}
+
+async function loadUser(uid) {
+  destroyCharts();
+  const [inp, sum, ins] = await Promise.all([
+    fetch(`data/${uid}/input.json?t=${Date.now()}`).then(r=>r.json()),
+    fetch(`data/${uid}/output_summary.json?t=${Date.now()}`).then(r=>r.json()),
+    fetch(`data/${uid}/output_insight.json?t=${Date.now()}`).then(r=>r.json()),
+  ]);
+  INPUT = inp.data || inp;
+  SUMMARY = sum.data || sum;
+  INSIGHT = ins.data ? (ins.data.insights || ins.data) : (ins.insights || ins || {});
+  showMain();
+  renderAll();
+}
+
+/* ══════════════════════════════════════════
+   Navigation
+   ══════════════════════════════════════════ */
+function showMain() {
+  document.getElementById('mainView').classList.remove('hidden');
+  document.getElementById('wtiView').classList.remove('active');
+  document.getElementById('detailView').classList.remove('active');
+  window.scrollTo(0,0);
+}
+function showWTI() {
+  document.getElementById('mainView').classList.add('hidden');
+  document.getElementById('wtiView').classList.add('active');
+  document.getElementById('detailView').classList.remove('active');
+  renderWTI('all');
+  window.scrollTo(0,0);
+}
+function showDetail(pillar) {
+  document.getElementById('mainView').classList.add('hidden');
+  document.getElementById('wtiView').classList.remove('active');
+  document.getElementById('detailView').classList.add('active');
+  renderDetail(pillar);
+  window.scrollTo(0,0);
+}
+
+/* ══════════════════════════════════════════
+   Render All
+   ══════════════════════════════════════════ */
+function renderAll() {
+  renderMainGauge();
+  renderBanner();
+  renderPillarCards();
+  renderWaysRow();
+}
+
+/* ── Improvement Banner ── */
+function renderBanner() {
+  const short = SUMMARY.overall_summary_short || {};
+  const overall = SUMMARY.overall_summary || {};
+  document.getElementById('bannerTitle').textContent = short.title || '';
+  const fullOverview = overall.overview || short.summary || '';
+  const firstLine = fullOverview.split(/[.\n]/)[0] + '.';
+  document.getElementById('bannerBody').textContent = firstLine;
+  document.getElementById('improveBanner').onclick = openSummarySheet;
+}
+
+function openSummarySheet() {
+  document.getElementById('sheetTitle').textContent = '';
+  const overall = SUMMARY.overall_summary || {};
+  let html = '';
+
+  if (typeof overall === 'object') {
+    if (overall.overview) {
+      html += '<h3 style="margin:0 0 8px">Overall</h3>';
+      html += '<p style="margin:0 0 16px;line-height:1.5">' + overall.overview + '</p>';
+    }
+    const well = overall.whats_going_well || [];
+    if (well.length) {
+      html += '<h3 style="margin:0 0 8px;color:#2e7d32">What\u2019s going well</h3>';
+      html += '<ul style="margin:0 0 16px;padding-left:20px">' + well.map(s => '<li style="margin-bottom:6px">' + s + '</li>').join('') + '</ul>';
+    }
+    const attn = overall.whats_needs_attention || [];
+    if (attn.length) {
+      html += '<h3 style="margin:0 0 8px;color:#d84315">What needs attention</h3>';
+      html += '<ul style="margin:0 0 16px;padding-left:20px">' + attn.map(s => '<li style="margin-bottom:6px">' + s + '</li>').join('') + '</ul>';
+    }
+  } else {
+    const sentences = String(overall).split(/(?<=[.!?])\s+/).filter(Boolean);
+    html = '<ul>' + sentences.map(s => '<li>' + s.trim() + '</li>').join('') + '</ul>';
+  }
+
+  document.getElementById('sheetBody').innerHTML = html;
+  document.getElementById('summarySheet').classList.add('open');
+}
+
+/* ── Main Gauge (dot ring) ── */
+function renderMainGauge() {
+  const score = INPUT.jio_score || 0;
+  document.getElementById('mainScoreVal').textContent = score;
+  document.getElementById('mainRating').textContent = ratingLabel(score);
+  const lastMonth = (INPUT.monthly_income || []).slice(-1)[0];
+  if (lastMonth) {
+    const d = new Date(lastMonth.month);
+    document.getElementById('updatedDate').textContent =
+      'Updated on ' + d.toLocaleDateString('en-IN',{day:'numeric',month:'long'}) + ' ⓘ';
+  }
+  drawDotGauge('mainGauge', 220, score, scoreColor(score));
+}
+
+function drawDotGauge(canvasId, size, score, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.width = size * 2; canvas.height = size * 2;
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  const radius = cx * 0.82;
+  const totalDots = 30;
+  const filledDots = Math.round(score / 100 * totalDots);
+  const gapAngle = 90;
+  const startAngle = 135;
+  const arcSpan = 360 - gapAngle;
+  const dotAngleStep = arcSpan / (totalDots - 1);
+  for (let i = 0; i < totalDots; i++) {
+    const angle = (startAngle + i * dotAngleStep) * Math.PI / 180;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    const isFilled = i < filledDots;
+    const dotRadius = (i % 3 === 0) ? 9 : 6;
+    ctx.beginPath();
+    ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = isFilled ? color : '#D1D5DB';
+    ctx.fill();
+  }
+}
+
+/* ── Pillar Cards ── */
+function renderPillarCards() {
+  const grid = document.getElementById('pillarGrid');
+  grid.innerHTML = '';
+  PILLARS.forEach((p,i) => {
+    const score = INPUT[PILLAR_SCORE_KEYS[p]] || 0;
+    const card = document.createElement('div');
+    card.className = 'pillar-card' + (i === PILLARS.length-1 && PILLARS.length%2 !== 0 ? ' full-width' : '');
+    card.onclick = () => showDetail(p);
+    const canvasId = 'miniGauge_' + p;
+    card.innerHTML = `
+      <div class="pillar-card-header">
+        <span class="pillar-name">${PILLAR_LABELS[p]}</span>
+        <span class="pillar-arrow">›</span>
+      </div>
+      <div class="mini-gauge-wrap">
+        <canvas id="${canvasId}" width="64" height="64"></canvas>
+        <div class="mini-gauge-value" style="color:${scoreColor(score)}">${score}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+    requestAnimationFrame(() => renderMiniGauge(canvasId, score));
+  });
+}
+function renderMiniGauge(canvasId, score) {
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const pct = score/100;
+  chartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [pct, 1-pct],
+        backgroundColor: [scoreColor(score), '#E5E7EB'],
+        borderWidth: 0,
+        circumference: 270,
+        rotation: 225,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      responsive: false,
+      plugins:{tooltip:{enabled:false},legend:{display:false}},
+      animation:{duration:600}
+    }
+  });
+}
+
+/* ── Ways Row ── */
+function renderWaysRow() {
+  let n = 0;
+  PILLARS.forEach(p => { n += (INSIGHT[p] || []).length; });
+  document.getElementById('waysBadge').textContent = n;
+  document.getElementById('waysRow').onclick = showWTI;
+}
+
+/* ══════════════════════════════════════════
+   Summary Sheet
+   ══════════════════════════════════════════ */
+function openPillarSheet() {
+  const pillar = document.getElementById('detailView').dataset.pillar;
+  if (!pillar) return;
+  const desc = PILLAR_DESCRIPTIONS[pillar];
+  if (!desc) return;
+  document.getElementById('pillarSheetTitle').textContent = desc.title;
+  let html = '<p>' + desc.body + '</p>';
+  html += '<h4>Here\'s a quick look</h4><ul>';
+  desc.points.forEach(p => { html += '<li>' + p + '</li>'; });
+  html += '</ul>';
+  document.getElementById('pillarSheetBody').innerHTML = html;
+  document.getElementById('pillarSheet').classList.add('open');
+}
+
+function closeSheet(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ══════════════════════════════════════════
+   Ways to Improve
+   ══════════════════════════════════════════ */
+function renderWTI(tab) {
+  const tabs = document.getElementById('wtiTabs');
+  const allTabs = ['all',...PILLARS];
+  const tabLabels = {all:'All',spending:'Spending',borrowing:'Borrowing',wealth:'Wealth',protection:'Protection',tax:'Tax'};
+  tabs.innerHTML = allTabs.map(t =>
+    `<div class="wti-tab ${t===tab?'active':''}" onclick="renderWTI('${t}')">${tabLabels[t]}</div>`
+  ).join('');
+
+  const container = document.getElementById('wtiCards');
+  let items = [];
+  if (tab === 'all') {
+    PILLARS.forEach(p => {
+      (INSIGHT[p]||[]).forEach(item => items.push({...item, _pillar: p}));
+    });
+  } else {
+    items = (INSIGHT[tab]||[]).map(item => ({...item, _pillar: tab}));
+  }
+
+  container.innerHTML = items.map(item => {
+    const pillarScore = INPUT[PILLAR_SCORE_KEYS[item._pillar]] || 0;
+    const gap = 100 - pillarScore;
+    const count = (INSIGHT[item._pillar]||[]).length || 1;
+    const impact = Math.round(gap / count);
+    return `
+      <div class="insight-card">
+        <h4>${item.headline} <span class="insight-feedback"><span>👍</span><span>👎</span></span></h4>
+        <p>${item.description}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════
+   Pillar Detail Views
+   ══════════════════════════════════════════ */
+function renderDetail(pillar) {
+  const view = document.getElementById('detailView');
+  view.dataset.pillar = pillar;
+  const score = INPUT[PILLAR_SCORE_KEYS[pillar]] || 0;
+  document.getElementById('detailTitleText').textContent = PILLAR_LABELS[pillar];
+  document.getElementById('detailSubtitle').textContent = PILLAR_TAGLINES[pillar] || '';
+  document.getElementById('detailGaugeVal').textContent = score;
+  document.getElementById('detailGaugeVal').style.color = scoreColor(score);
+
+  const gctx = document.getElementById('detailGaugeCanvas').getContext('2d');
+  if (chartInstances.detailGauge) chartInstances.detailGauge.destroy();
+  chartInstances.detailGauge = new Chart(gctx, {
+    type:'doughnut',
+    data:{datasets:[{data:[score/100,1-score/100],backgroundColor:[scoreColor(score),'#E5E7EB'],borderWidth:0,circumference:270,rotation:225}]},
+    options:{cutout:'72%',responsive:false,plugins:{tooltip:{enabled:false},legend:{display:false}},animation:{duration:500}}
+  });
+
+  const body = document.getElementById('detailBody');
+  body.innerHTML = '';
+  const insightCount = (INSIGHT[pillar]||[]).length;
+  body.innerHTML += `
+    <div class="ways-row" onclick="showWTI()" style="background:var(--white);border-radius:12px;margin-bottom:16px;box-shadow:0 1px 3px var(--card-shadow);">
+      <div class="ways-badge">${insightCount}</div>
+      <div class="ways-label">Ways to improve</div>
+      <div class="ways-arrow">›</div>
+    </div>
+  `;
+
+  if (pillar === 'spending') renderSpendingDetail(body);
+  else if (pillar === 'borrowing') renderBorrowingDetail(body);
+  else if (pillar === 'protection') renderProtectionDetail(body);
+  else if (pillar === 'wealth') renderWealthDetail(body);
+  else if (pillar === 'tax') renderTaxDetail(body);
+
+  // For You at bottom
+  body.innerHTML += `
+    <div style="margin-top:24px;">
+      <div style="font-size:18px;font-weight:800;margin-bottom:4px;">For you ›</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Smart picks based on your score</div>
+      <div class="promo-card">
+        <div class="promo-logo">Jio</div>
+        <div class="promo-badge">Recommended</div>
+        <div class="promo-title">Boost your<br>Protection score</div>
+        <div class="promo-sub">Acko Insurance</div>
+        <div class="promo-source">Based on your Protection report</div>
+        <button class="promo-cta">Explore</button>
+      </div>
+      <div class="dot-indicators"><span class="active"></span><span></span><span></span></div>
+    </div>
+  `;
+}
+
+/* ── Spending Detail ── */
+function renderSpendingDetail(body) {
+  const ms = SUMMARY.metric_summaries_ui || {};
+  const incS = INPUT.monthly_income||[], spS = INPUT.monthly_spend||[];
+  const sirSeries = INPUT.spend_to_income_ratio || [];
+  const latestSir = sirSeries.length ? (sirSeries[sirSeries.length-1].value * 100).toFixed(0) + '%' : '--';
+  const sirVal = sirSeries.length ? sirSeries[sirSeries.length-1].value : 0;
+
+  // Spend to income (combined dual-line chart)
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-name">Spend to income</span>
+    </div>
+    <div class="metric-big-value">${latestSir}</div>
+    <div style="display:flex;gap:16px;font-size:12px;margin-bottom:8px;">
+      <span><span class="legend-dot" style="background:var(--blue)"></span>Income</span>
+      <span><span class="legend-dot" style="background:var(--purple-soft)"></span>Spending</span>
+    </div>
+    <div class="chart-wrap"><canvas id="spendIncomeChart"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.spend_to_income_ratio||''}</p></div>
+    
+  </div>`;
+  requestAnimationFrame(() => {
+    renderDualLineChart('spendIncomeChart',
+      incS.map(s=>monthLabel(s.month)),
+      incS.map(s=>s.value), spS.map(s=>s.value),
+      'Income','Spending','#3B82F6','#C084FC');
+  });
+
+  // Saving consistency (month circles)
+  const surplus = INPUT.saving_consistency || [];
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const surplusMap = {};
+  surplus.forEach(s => {
+    const d = new Date(s.month);
+    const key = monthNames[d.getMonth()];
+    surplusMap[key] = s.value;
+  });
+  const currentMonth = surplus.length ? monthNames[new Date(surplus[surplus.length-1].month).getMonth()] : '';
+  const savedCount = surplus.filter(s=>s.value===1).length;
+  const totalMonths = surplus.length;
+
+  const scUiText = (SUMMARY.metric_summaries_ui || {}).saving_consistency || '';
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-name">Saving consistency</span>
+      ${statusBadge(savedCount >= totalMonths*0.6 ? 60 : 20)}
+    </div>
+    <div class="metric-big-value">${savedCount} <span style="font-size:18px;font-weight:500;color:var(--text-secondary)">/ ${totalMonths} months</span></div>
+    <div class="month-circles">
+      ${monthNames.map(m => {
+        const val = surplusMap[m];
+        const cls = val === 1 ? 'saved' : val === 0 ? 'not-saved' : 'no-data';
+        const isCurrent = m === currentMonth;
+        return `<div class="month-circle ${cls}${isCurrent?' current':''}">${m}</div>`;
+      }).join('')}
+    </div>
+    <div class="month-legend">
+      <span><span class="legend-dot" style="background:var(--handle)"></span>No data</span>
+      <span><span class="legend-dot" style="background:var(--purple-soft)"></span>Not saved</span>
+      <span><span class="legend-dot" style="background:var(--purple)"></span>Saved</span>
+    </div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${scUiText || ('You saved in ' + savedCount + ' out of ' + totalMonths + ' months.' + (savedCount < totalMonths*0.5 ? ' Building a regular savings habit is crucial for financial stability.' : ' Keep up the consistent saving habit.'))}</p></div>
+    
+  </div>`;
+
+  // Emergency savings
+  const ec = INPUT.emergency_corpus||0, iec = INPUT.ideal_emergency_corpus||1;
+  const lastSpend = spS.length ? spS[spS.length-1].value : 1;
+  const monthsCovered = lastSpend > 0 ? Math.round(ec / lastSpend) : 0;
+  const monthsRecommended = lastSpend > 0 ? Math.round(iec / lastSpend) : 0;
+  const barPct = Math.min(100, Math.round(ec / iec * 100));
+
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-name">Emergency savings</span>
+      ${statusBadge(ec >= iec ? 60 : 20)}
+    </div>
+    <div class="metric-big-value">${fmtINR(ec)}</div>
+    <div style="background:var(--border);border-radius:8px;height:14px;overflow:hidden;margin-bottom:16px;">
+      <div style="background:var(--purple);height:100%;width:${barPct}%;border-radius:8px;transition:width 0.5s;"></div>
+    </div>
+    <div style="font-size:13px;margin-bottom:6px;">
+      <span style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span><span class="legend-dot" style="background:var(--purple)"></span>Current (${monthsCovered} months)</span>
+        <span style="font-weight:600;">${fmtINR(ec)}</span>
+      </span>
+      <span style="display:flex;justify-content:space-between;">
+        <span><span class="legend-dot" style="background:var(--handle)"></span>Recommended (${monthsRecommended} months)</span>
+        <span style="font-weight:600;">${fmtINR(iec)}</span>
+      </span>
+    </div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.emergency_corpus||''}</p></div>
+    
+  </div>`;
+}
+
+/* ── Borrowing Detail ── */
+function renderBorrowingDetail(body) {
+  const ms = SUMMARY.metric_summaries_ui || {};
+  // EMI burden
+  const emiB = INPUT.emi_burden||[];
+  const latestEmi = emiB.length ? (emiB[emiB.length-1].value*100).toFixed(0)+'%' : '--';
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">EMI burden</span>
+    </div>
+    <div class="metric-big-value">${latestEmi}</div>
+    <div style="display:flex;gap:16px;font-size:12px;margin-bottom:8px;">
+      <span><span class="legend-dot" style="background:var(--blue)"></span>Income</span>
+      <span><span class="legend-dot" style="background:var(--purple-soft)"></span>EMI</span>
+    </div>
+    <div class="chart-wrap"><canvas id="emiChart"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.emi_burden||''}</p></div>
+    
+  </div>`;
+  const incS = INPUT.monthly_income||[], emiS = INPUT.monthly_emi||[];
+  requestAnimationFrame(() => {
+    renderDualLineChart('emiChart',
+      incS.map(s=>monthLabel(s.month)),
+      incS.map(s=>s.value), emiS.map(s=>s.value),
+      'Income','EMI','#3B82F6','#C084FC');
+  });
+
+  // Credit score
+  const cs = INPUT.credit_score||[];
+  const latestCS = cs.length ? cs[cs.length-1].value : '--';
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Credit score trend</span>
+      ${statusBadge(latestCS >= 700 ? 60 : 20)}
+    </div>
+    <div class="chart-wrap"><canvas id="csChart"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.credit_score||''}</p></div>
+    
+  </div>`;
+  requestAnimationFrame(() => {
+    renderLineChart('csChart', cs.map(s=>monthLabel(s.month)), cs.map(s=>s.value),
+      {label:'Score',color:'#7C3AED',fill:'#EDE9FE',pointLabel:true});
+  });
+}
+
+/* ── Protection Detail ── */
+function renderProtectionDetail(body) {
+  const ms = SUMMARY.metric_summaries_ui || {};
+  const hc = INPUT.current_health_cover||0, ihc = INPUT.ideal_health_cover||1;
+  const lc = INPUT.current_life_cover||0, ilc = INPUT.ideal_life_cover||1;
+  const hAdq = INPUT.health_cover_adequacy||0, lAdq = INPUT.life_cover_adequacy||0;
+
+  // Health coverage
+  const maxH = Math.max(hc, ihc);
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Health coverage</span>${statusBadge(hAdq>=1?60:20)}</div>
+    <div class="coverage-bars" style="height:160px;">
+      <div class="bar-item">
+        <div class="bar-label-top">${fmtINR(hc)} (${Math.round(hc/maxH*100)}%)</div>
+        <div class="bar current" style="width:90px;height:${Math.max(20,hc/maxH*140)}px;"></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-top">${fmtINR(ihc)} (${Math.round(ihc/maxH*100)}%)</div>
+        <div class="bar recommended" style="width:90px;height:${Math.max(20,ihc/maxH*140)}px;"></div>
+      </div>
+    </div>
+    <div class="coverage-legend">
+      <span><span class="legend-dot" style="background:var(--purple-soft)"></span>Current coverage</span>
+      <span><span class="legend-dot" style="background:var(--purple)"></span>Recommended coverage</span>
+    </div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.health_insurance||''}</p></div>
+    
+  </div>`;
+
+  // Life coverage
+  const maxL = Math.max(lc, ilc);
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Life coverage</span>${statusBadge(lAdq>=1?60:20)}</div>
+    <div class="coverage-bars" style="height:160px;">
+      <div class="bar-item">
+        <div class="bar-label-top">${fmtINR(lc)} (${Math.round(lc/maxL*100)}%)</div>
+        <div class="bar current" style="width:90px;height:${Math.max(20,lc/maxL*140)}px;"></div>
+      </div>
+      <div class="bar-item">
+        <div class="bar-label-top">${fmtINR(ilc)} (${Math.round(ilc/maxL*100)}%)</div>
+        <div class="bar recommended" style="width:90px;height:${Math.max(20,ilc/maxL*140)}px;"></div>
+      </div>
+    </div>
+    <div class="coverage-legend">
+      <span><span class="legend-dot" style="background:var(--purple-soft)"></span>Current coverage</span>
+      <span><span class="legend-dot" style="background:var(--purple)"></span>Recommended coverage</span>
+    </div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.life_insurance||''}</p></div>
+    
+  </div>`;
+}
+
+/* ── Wealth Detail ── */
+function renderWealthDetail(body) {
+  const ms = SUMMARY.metric_summaries_ui || {};
+  // Portfolio diversification
+  const pd = INPUT.portfolio_diversification || [];
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Portfolio diversification</span></div>
+    <div style="width:180px;height:180px;margin:0 auto;"><canvas id="portfolioChart"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.portfolio_diversification||''}</p></div>
+    
+  </div>`;
+  requestAnimationFrame(() => {
+    const ctx = document.getElementById('portfolioChart');
+    if (!ctx) return;
+    const colors = ['#6D28D9','#3B82F6','#F59E0B','#2DA94F','#EF4444','#C084FC'];
+    chartInstances.portfolioChart = new Chart(ctx, {
+      type:'doughnut',
+      data:{
+        labels: pd.map(d=>d.name),
+        datasets:[{data:pd.map(d=>d.value),backgroundColor:colors.slice(0,pd.length),borderWidth:2,borderColor:'#fff'}]
+      },
+      options:{cutout:'55%',responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:12}}}}
+    });
+  });
+
+  // Investment rate
+  const ir = INPUT.investment_rate||[];
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Investment rate</span></div>
+    <div class="chart-wrap"><canvas id="irChart"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.investment_rate||''}</p></div>
+    
+  </div>`;
+  requestAnimationFrame(() => {
+    renderLineChart('irChart', ir.map(s=>monthLabel(s.month)), ir.map(s=>(s.value*100).toFixed(1)),
+      {label:'Rate %',color:'#2DA94F',fill:'#D1FAE5'});
+  });
+}
+
+/* ── Tax Detail ── */
+function renderTaxDetail(body) {
+  const ms = SUMMARY.metric_summaries_ui || {};
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Tax overview</span></div>
+    <div class="tax-info-row"><span class="label">Filing Status</span><span class="val">${INPUT.tax_filing_status||'--'}</span></div>
+    <div class="tax-info-row"><span class="label">Regime</span><span class="val">${INPUT.tax_regime||'Not set'}</span></div>
+    <div class="tax-info-row"><span class="label">Tax Saving Index</span><span class="val">${INPUT.tax_saving_index||0} / 5</span></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.tax_filing_status||''}</p></div>
+    
+  </div>`;
+
+  // Tax savings
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Tax savings</span></div>
+    <div style="margin-top:12px;">
+      <div style="background:var(--border);border-radius:8px;height:12px;overflow:hidden;margin-bottom:16px;">
+        <div style="background:var(--purple);height:100%;width:${(INPUT.tax_saving_index||0)/5*100}%;border-radius:8px;"></div>
+      </div>
+    </div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${ms.tax_savings||''}</p></div>
+    
+  </div>`;
+
+  // Deductions
+  const availed = INPUT.tax_saving_index_availed||[];
+  const possible = INPUT.tax_saving_index_possible||[];
+  body.innerHTML += `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">Tax deductions</span></div>
+    <div class="deduction-list">
+      ${possible.map(d => `
+        <div class="deduction-item">
+          <span class="${availed.includes(d)?'check':'cross'}">${availed.includes(d)?'✓':'✗'}</span>
+          <span>${d}</span>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════
+   Chart Helpers
+   ══════════════════════════════════════════ */
+function metricCardHTML(name, desc, bigVal, statusHtml, chartId) {
+  return `<div class="metric-card">
+    <div class="metric-header"><span class="metric-name">${name}</span>${statusHtml}</div>
+    ${bigVal ? `<div class="metric-big-value">${bigVal}</div>` : ''}
+    <div class="chart-wrap"><canvas id="${chartId}"></canvas></div>
+    <div class="ai-insight"><span class="sparkle">✨</span><p>${desc||''}</p></div>
+  </div>`;
+}
+function statusFromValue(v, good, bad) {
+  return '';
+}
+
+function renderLineChart(id, labels, data, opts) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  chartInstances[id] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label: opts.label||'',
+        data, borderColor: opts.color,
+        backgroundColor: opts.fill||'transparent',
+        fill: !!opts.fill,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: opts.color,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{enabled:true}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#9CA3AF'}},
+        y:{grid:{color:'#E5E7EB'},ticks:{font:{size:11},color:'#9CA3AF'}}
+      }
+    }
+  });
+}
+
+function renderDualLineChart(id, labels, data1, data2, label1, label2, color1, color2) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  chartInstances[id] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:label1,data:data1,borderColor:color1,backgroundColor:color1+'22',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:color1},
+        {label:label2,data:data2,borderColor:color2,backgroundColor:'transparent',fill:false,tension:0.3,pointRadius:3,pointBackgroundColor:color2,borderDash:[4,4]},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{enabled:true}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11},color:'#9CA3AF'}},
+        y:{grid:{color:'#E5E7EB'},ticks:{font:{size:11},color:'#9CA3AF',callback:v=>fmtINR(v)}}
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════
+   Init
+   ══════════════════════════════════════════ */
+loadUsers();
+</script>
+</body>
+</html>
