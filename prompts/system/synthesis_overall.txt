@@ -49,6 +49,8 @@ Do NOT use the word "surplus" in user-facing summaries.
 WORD DIVERSITY:
 Do not reuse the same qualifier more than twice. "territory" at most twice, "comfortably" at most twice, "steadily" at most once.
 
+ZERO-VALUE METRICS: When a metric's value is 0 (e.g. EMI burden is 0%, investment rate is 0%, insurance cover is ₹0), do NOT write "0%" or "₹0" in the output. Instead, describe the situation in plain language — "no active loan repayments," "no investments yet," "no insurance cover in place." This keeps the tone natural and avoids highlighting a zero that can feel stark or discouraging.
+
 Always use Indian English language.
 
 === OVERALL SUMMARY (structured object) ===
