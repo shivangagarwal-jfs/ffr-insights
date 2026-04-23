@@ -49,37 +49,21 @@ PILLAR_SCORES: dict[str, str] = {
 }
 
 _DEFAULTS: dict[str, Any] = {
-    "prompt_file": "summary_v13_gemini_wo_insights.txt",
-    "prompt_mode": "monolithic",
-    "insight_system_prompt_file": "insight_system_2.txt",
+    # Keys referenced directly via _DEFAULTS["key"] as inline fallbacks.
+    # Everything else lives exclusively in config.yaml and is merged via
+    # _load_config() -> cfg.setdefault(key, default).
+    "prompt_file": "synthesis_overall.txt",
+    "insight_system_prompt_file": "insight_system.txt",
     "temperature_summary": 0.3,
-    "temperature_insights": 0.7,
-    "max_tokens_insight": 8192,
     "max_tokens_pillar": 4096,
     "max_tokens_synthesis": 4096,
-    "max_tokens": 1024,
-    "max_validation_retries": 3,
+    "max_tokens_summary": 16384,
     "gemini_model": "gemini-2.5-flash",
     "gemini_max_output_tokens": 16384,
     "gemini_vertex_project": "aigateway",
     "gemini_vertex_location": "global",
     "gemini_http_api_version": "v1",
-    "max_tokens_summary": 16384,
-    "max_tokens_insight_min": 512,
-    "max_tokens_insight_max": 8192,
     "llm_debug": False,
-    "log_level": "INFO",
-    "log_max_body_chars": 500_000,
-    "app_version": "1.0.0",
-    "insight_headline_min_words": 2,
-    "insight_headline_max_words": 4,
-    "insight_description_min_words": 20,
-    "insight_description_max_words": 23,
-    "insight_max_evidence_datapoints": 6,
-    "spend_channel_threshold_pct": 15.0,
-    "amount_grounding_tolerance": 0.02,
-    "embedding_model": "text-embedding-3-small",
-    "novelty_threshold": 0.85,
 }
 
 
