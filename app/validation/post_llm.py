@@ -12,9 +12,12 @@ Audit layer (build_validation_audit, CheckAuditEntry) lives in services/summary/
 from __future__ import annotations
 
 import itertools
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Set
+
+logger = logging.getLogger(__name__)
 
 
 # ── Section 1: Core Types ────────────────────────────────────────────────────
@@ -997,6 +1000,197 @@ def _metric_sources_label(metric_key: str) -> str:
     return ", ".join(cols) if cols else metric_key
 
 
+# --- Overall-summary grounding (two-pass pool approach) ---
+
+
+def _collect_allowed_numbers(
+    req_data: Mapping[str, Any], resp_data: Mapping[str, Any],
+) -> dict[str, set]:
+    """Build an allowed-number pool from metric_summaries that passed per-metric grounding.
+
+    Returns a dict with keys:
+      "pct"   -> set of float percentages found in metric summaries
+      "score" -> set of int credit scores
+      "out_of" -> set of (numerator, denominator) tuples
+      "amount" -> set of int plain-digit amounts (>=1000)
+      "ratio"  -> set of float multiplier values (e.g. 0.88x)
+      "months" -> set of int month counts
+    Also seeds the pool with key request-data derived values so that numbers
+    traceable to input data are always allowed.
+    """
+    pool: dict[str, set] = {
+        "pct": set(),
+        "score": set(),
+        "out_of": set(),
+        "amount": set(),
+        "ratio": set(),
+        "months": set(),
+    }
+
+    # -- Seed from request data (ground truth) --
+    for ratio_key in ("spend_to_income_ratio", "emi_burden", "investment_rate"):
+        for p in _series_ratio_percents(req_data, ratio_key):
+            pool["pct"].add(round(p, 2))
+    for adequacy_key in ("life_cover_adequacy", "health_cover_adequacy"):
+        ad = req_data.get(adequacy_key)
+        if isinstance(ad, (int, float)):
+            a = float(ad)
+            if 0 < a <= 5:
+                pool["pct"].add(round(a * 100.0, 2))
+                pool["ratio"].add(round(a, 4))
+    pool["score"].update(_series_int_samples(req_data, "credit_score"))
+    tsi = req_data.get("tax_saving_index")
+    if isinstance(tsi, (int, float)):
+        pool["out_of"].add((int(tsi), 5))
+    sc_sum, sc_nm = _saving_consistency_sum_window(req_data.get("saving_consistency"))
+    if sc_sum is not None and sc_nm:
+        pool["out_of"].add((sc_sum, sc_nm))
+    lb = req_data.get("liquidity_buffer")
+    if isinstance(lb, (int, float)):
+        pool["months"].add(int(round(float(lb))))
+    pd = req_data.get("portfolio_diversification")
+    if isinstance(pd, list):
+        for row in pd:
+            if isinstance(row, Mapping):
+                try:
+                    pool["pct"].add(float(int(row["value"])))
+                except (KeyError, TypeError, ValueError):
+                    pass
+    ec = req_data.get("emergency_corpus")
+    iec = req_data.get("ideal_emergency_corpus")
+    if isinstance(ec, (int, float)) and isinstance(iec, (int, float)) and float(iec) > 0:
+        pool["ratio"].add(round(float(ec) / float(iec), 4))
+
+    # -- Harvest numbers from validated metric summaries --
+    ms = resp_data.get("metric_summaries")
+    if isinstance(ms, Mapping):
+        for text in ms.values():
+            t = str(text or "")
+            for p in extract_percentages(t):
+                pool["pct"].add(round(p, 2))
+            for s in extract_credit_scores(t):
+                pool["score"].add(s)
+            pair = extract_out_of_pattern(t)
+            if pair:
+                pool["out_of"].add(pair)
+            for m in re.finditer(r"\b(\d{4,})\b", t):
+                pool["amount"].add(int(m.group(1)))
+            for m in re.finditer(r"\b(\d+(?:\.\d+)?)\s*x\b", t, re.IGNORECASE):
+                try:
+                    pool["ratio"].add(round(float(m.group(1)), 4))
+                except ValueError:
+                    pass
+            for m in re.finditer(r"\b(\d+(?:\.\d+)?)\s+months?\b", t, re.IGNORECASE):
+                try:
+                    pool["months"].add(int(round(float(m.group(1)))))
+                except ValueError:
+                    pass
+
+    # -- Also harvest from pillar_summaries --
+    ps = resp_data.get("pillar_summaries")
+    if isinstance(ps, Mapping):
+        for text in ps.values():
+            t = str(text or "")
+            for p in extract_percentages(t):
+                pool["pct"].add(round(p, 2))
+            for s in extract_credit_scores(t):
+                pool["score"].add(s)
+            pair = extract_out_of_pattern(t)
+            if pair:
+                pool["out_of"].add(pair)
+            for m in re.finditer(r"\b(\d{4,})\b", t):
+                pool["amount"].add(int(m.group(1)))
+
+    return pool
+
+
+_OVERALL_PCT_TOL = 2.5
+
+
+def _validate_overall_summary_grounding(
+    overall_text: str,
+    allowed: dict[str, set],
+    req_data: Mapping[str, Any],
+    issues: list[ValidationIssue],
+) -> None:
+    """Check numbers in overall_summary against the allowed pool.
+
+    Only flags a number if it cannot be traced to any metric summary or
+    request data field. Semantic checks (portfolio_overlap emptiness,
+    tax_filing_status phrasing) are run directly since they are not
+    numeric-pool checks.
+    """
+    allowed_pct = allowed.get("pct", set())
+    allowed_scores = allowed.get("score", set())
+    allowed_out_of = allowed.get("out_of", set())
+    allowed_amounts = allowed.get("amount", set())
+
+    # -- Percentage check --
+    for p in extract_percentages(overall_text):
+        if allowed_pct and any(abs(p - a) <= _OVERALL_PCT_TOL for a in allowed_pct):
+            continue
+        issues.append(ValidationIssue(
+            "overall_summary.ungrounded_pct",
+            f"overall_summary cites {p:g}% which does not match any number from "
+            f"metric_summaries or request data (allowed within ±{_OVERALL_PCT_TOL}%: "
+            f"{sorted(allowed_pct)}).",
+            severity="warning",
+        ))
+
+    # -- Credit score check --
+    for s in extract_credit_scores(overall_text):
+        if s in allowed_scores:
+            continue
+        issues.append(ValidationIssue(
+            "overall_summary.ungrounded_score",
+            f"overall_summary cites credit score {s} which does not appear in "
+            f"metric_summaries or request data (allowed: {sorted(allowed_scores)}).",
+            severity="warning",
+        ))
+
+    # -- "X out of Y" check --
+    pair = extract_out_of_pattern(overall_text)
+    if pair and pair not in allowed_out_of:
+        a, b = pair
+        issues.append(ValidationIssue(
+            "overall_summary.ungrounded_out_of",
+            f"overall_summary cites \u201c{a} out of {b}\u201d which does not match "
+            f"metric_summaries or request data (allowed: {sorted(allowed_out_of)}).",
+            severity="warning",
+        ))
+
+    # -- Large plain-digit amount check --
+    for m in re.finditer(r"\b(\d{5,})\b", overall_text):
+        n = int(m.group(1))
+        if n in allowed_amounts:
+            continue
+        if any(abs(n - a) <= max(500, int(0.02 * n)) for a in allowed_amounts):
+            continue
+        issues.append(ValidationIssue(
+            "overall_summary.ungrounded_amount",
+            f"overall_summary cites amount {n:,} which does not appear in "
+            f"metric_summaries or request data.",
+            severity="warning",
+        ))
+
+    # -- Semantic checks (not pool-based, run directly) --
+    for msg in _output_grounded_portfolio_overlap(overall_text, req_data):
+        issues.append(ValidationIssue(
+            "overall_summary.portfolio_overlap",
+            f"{msg} | Response: data.overall_summary | "
+            f"Request fields involved: portfolio_overlap",
+            severity="warning",
+        ))
+
+    for msg in _output_tax_filing_claims_consistent(overall_text, req_data):
+        issues.append(ValidationIssue(
+            "overall_summary.tax_filing_status",
+            f"{msg} | Response: data.overall_summary | "
+            f"Request fields involved: tax_filing_status",
+            severity="warning",
+        ))
+
+
 # --- Summary orchestrator ---
 
 def validate_pillar_summary(
@@ -1008,23 +1202,46 @@ def validate_pillar_summary(
     """Full summary validation: request_id, word caps, grounding, hygiene, tax_regime, rupee pool, directional trends."""
     issues: list[ValidationIssue] = []
 
+    def _checkpoint(check_name: str, before: int) -> None:
+        new_issues = issues[before:]
+        if not new_issues:
+            logger.info("validation.check_passed check=%s", check_name)
+            return
+        errs = sum(1 for i in new_issues if i.severity == "error")
+        warns = sum(1 for i in new_issues if i.severity == "warning")
+        logger.warning(
+            "validation.check_failed check=%s errors=%d warnings=%d",
+            check_name, errs, warns,
+        )
+        for iss in new_issues:
+            logger.warning(
+                "validation.issue check=%s severity=%s check_id=%s message=%s",
+                check_name, iss.severity, iss.check_id, iss.message,
+            )
+
     req_meta = request.get("metadata")
     req_data = request.get("data")
+    n = len(issues)
     if not isinstance(req_data, Mapping):
         issues.append(ValidationIssue("request.data", "Request has no data object.", severity="error"))
         req_data = {}
-
     out_text = _concat_output_text(response)
     if not out_text.strip():
         issues.append(ValidationIssue("response.empty", "No summary text found under response.data.", severity="error"))
+    _checkpoint("structural", n)
 
+    n = len(issues)
     resp_data = response.get("data")
     if isinstance(resp_data, Mapping):
         issues.extend(_validate_summary_word_counts(resp_data))
+    _checkpoint("word_count", n)
 
+    n = len(issues)
     if out_text.strip():
         issues.extend(validate_text_hygiene(out_text))
+    _checkpoint("text_hygiene", n)
 
+    n = len(issues)
     if strict_request_id and isinstance(req_meta, Mapping):
         rid_in = str(req_meta.get("request_id") or "")
         out_meta = response.get("metadata")
@@ -1034,37 +1251,47 @@ def validate_pillar_summary(
                 "metadata.request_id", "Output request_id does not match input.",
                 expected=rid_in, severity="error",
             ))
+    _checkpoint("request_id_match", n)
 
     rd: Mapping[str, Any] | None = resp_data if isinstance(resp_data, Mapping) else None
 
-    def _append_metric_fail(check_id: str, metric_key: str, detail: str, *, severity: str = "warning") -> None:
+    def _append_metric_fail(
+        check_id: str, metric_key: str, detail: str, *,
+        severity: str = "warning", llm_text: str = "",
+    ) -> None:
         src = _metric_sources_label(metric_key)
         issues.append(ValidationIssue(
             check_id,
             f"{detail} | Response: data.metric_summaries['{metric_key}'] | Request fields involved: {src}",
             severity=severity,
         ))
+        logger.warning(
+            "validation.metric_issue check_id=%s metric=%s severity=%s "
+            "llm_output=%r message=%s",
+            check_id, metric_key, severity, llm_text, detail,
+        )
 
+    n = len(issues)
     if rd is not None:
         sc = _safe_metric(rd, "spend_to_income_ratio")
         if sc:
             for msg in _output_grounded_spend(sc, req_data):
-                _append_metric_fail("spend_to_income_ratio", "spend_to_income_ratio", msg)
+                _append_metric_fail("spend_to_income_ratio", "spend_to_income_ratio", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "credit_score")
         if sc:
             for msg in _output_grounded_credit(sc, req_data):
-                _append_metric_fail("credit_score", "credit_score", msg, severity="error")
+                _append_metric_fail("credit_score", "credit_score", msg, severity="error", llm_text=sc)
 
         sc = _safe_metric(rd, "emi_burden")
         if sc:
             for msg in _output_grounded_emi(sc, req_data):
-                _append_metric_fail("emi_burden", "emi_burden", msg)
+                _append_metric_fail("emi_burden", "emi_burden", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "investment_rate")
         if sc:
             for msg in _output_grounded_investment(sc, req_data):
-                _append_metric_fail("investment_rate", "investment_rate", msg)
+                _append_metric_fail("investment_rate", "investment_rate", msg, llm_text=sc)
 
         for metric_key, adk, ck, ik in (
             ("life_insurance", "life_cover_adequacy", "current_life_cover", "ideal_life_cover"),
@@ -1073,12 +1300,12 @@ def validate_pillar_summary(
             sc = _safe_metric(rd, metric_key)
             if sc:
                 for msg in _output_grounded_cover(sc, req_data, adequacy_key=adk, current_key=ck, ideal_key=ik):
-                    _append_metric_fail(adk, metric_key, msg)
+                    _append_metric_fail(adk, metric_key, msg, llm_text=sc)
 
         sc = _safe_metric(rd, "emergency_corpus")
         if sc:
             for msg in _output_grounded_emergency(sc, req_data):
-                _append_metric_fail("emergency_corpus", "emergency_corpus", msg)
+                _append_metric_fail("emergency_corpus", "emergency_corpus", msg, llm_text=sc)
 
         pd = req_data.get("portfolio_diversification")
         if isinstance(pd, list) and pd:
@@ -1086,30 +1313,36 @@ def validate_pillar_summary(
             if sc:
                 rows = [r for r in pd if isinstance(r, Mapping)]
                 for msg in _output_grounded_portfolio_div(sc, rows):
-                    _append_metric_fail("portfolio_diversification", "portfolio_diversification", msg)
+                    _append_metric_fail("portfolio_diversification", "portfolio_diversification", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "portfolio_overlap")
         if sc:
             for msg in _output_grounded_portfolio_overlap(sc, req_data):
-                _append_metric_fail("portfolio_overlap", "portfolio_overlap", msg)
+                _append_metric_fail("portfolio_overlap", "portfolio_overlap", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "tax_savings")
         if sc:
             for msg in _output_grounded_tax_savings(sc, req_data):
-                _append_metric_fail("tax_saving_index", "tax_savings", msg)
+                _append_metric_fail("tax_saving_index", "tax_savings", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "saving_consistency")
         if sc:
             for msg in _output_grounded_saving_consistency(sc, req_data):
-                _append_metric_fail("saving_consistency", "saving_consistency", msg)
+                _append_metric_fail("saving_consistency", "saving_consistency", msg, llm_text=sc)
 
         sc = _safe_metric(rd, "tax_filing_status")
         if sc:
             for msg in _output_tax_filing_claims_consistent(sc, req_data):
-                _append_metric_fail("tax_filing_status", "tax_filing_status", msg)
+                _append_metric_fail("tax_filing_status", "tax_filing_status", msg, llm_text=sc)
+    _checkpoint("metric_grounding", n)
 
+    n = len(issues)
+    if rd is not None:
         issues.extend(_validate_directional_metric_lines(req_data, rd))
+    _checkpoint("directional_trends", n)
 
+    n = len(issues)
+    if rd is not None:
         _raw_overall = (rd or {}).get("overall_summary")
         if isinstance(_raw_overall, Mapping):
             _ov_parts = [str(_raw_overall.get("overview") or "")]
@@ -1119,48 +1352,13 @@ def validate_pillar_summary(
         else:
             overall_text = str(_raw_overall or "")
         if overall_text.strip():
-            def _append_overall_fail(
-                check_id: str, metric_key: str, detail: str, *, severity: str = "warning",
-            ) -> None:
-                src = _metric_sources_label(metric_key)
-                issues.append(ValidationIssue(
-                    f"overall_summary.{check_id}",
-                    f"{detail} | Response: data.overall_summary | Request fields involved: {src}",
-                    severity=severity,
-                ))
+            allowed = _collect_allowed_numbers(req_data, rd)
+            _validate_overall_summary_grounding(
+                overall_text, allowed, req_data, issues,
+            )
+    _checkpoint("overall_summary_grounding", n)
 
-            for msg in _output_grounded_spend(overall_text, req_data):
-                _append_overall_fail("spend_to_income_ratio", "spend_to_income_ratio", msg)
-            for msg in _output_grounded_credit(overall_text, req_data):
-                _append_overall_fail("credit_score", "credit_score", msg)
-            for msg in _output_grounded_emi(overall_text, req_data):
-                _append_overall_fail("emi_burden", "emi_burden", msg)
-            for msg in _output_grounded_investment(overall_text, req_data):
-                _append_overall_fail("investment_rate", "investment_rate", msg)
-            for metric_key, adk, ck, ik in (
-                ("life_insurance", "life_cover_adequacy", "current_life_cover", "ideal_life_cover"),
-                ("health_insurance", "health_cover_adequacy", "current_health_cover", "ideal_health_cover"),
-            ):
-                for msg in _output_grounded_cover(
-                    overall_text, req_data, adequacy_key=adk, current_key=ck, ideal_key=ik,
-                ):
-                    _append_overall_fail(adk, metric_key, msg)
-            for msg in _output_grounded_emergency(overall_text, req_data):
-                _append_overall_fail("emergency_corpus", "emergency_corpus", msg)
-            pd_data = req_data.get("portfolio_diversification")
-            if isinstance(pd_data, list) and pd_data:
-                rows = [r for r in pd_data if isinstance(r, Mapping)]
-                for msg in _output_grounded_portfolio_div(overall_text, rows):
-                    _append_overall_fail("portfolio_diversification", "portfolio_diversification", msg)
-            for msg in _output_grounded_portfolio_overlap(overall_text, req_data):
-                _append_overall_fail("portfolio_overlap", "portfolio_overlap", msg)
-            for msg in _output_grounded_tax_savings(overall_text, req_data):
-                _append_overall_fail("tax_saving_index", "tax_savings", msg)
-            for msg in _output_grounded_saving_consistency(overall_text, req_data):
-                _append_overall_fail("saving_consistency", "saving_consistency", msg)
-            for msg in _output_tax_filing_claims_consistent(overall_text, req_data):
-                _append_overall_fail("tax_filing_status", "tax_filing_status", msg)
-
+    n = len(issues)
     tr = req_data.get("tax_regime")
     tr_norm = _normalize_tax_regime(tr)
     if rd is not None:
@@ -1186,7 +1384,9 @@ def validate_pillar_summary(
                     f"regime is 'old').",
                     expected="new", severity="warning",
                 ))
+    _checkpoint("tax_regime", n)
 
+    n = len(issues)
     try:
         from app.persona.personas import soft_output_warnings
     except ImportError:
@@ -1200,8 +1400,16 @@ def validate_pillar_summary(
         if has_persona_ctx:
             for w in soft_output_warnings(req_data, out_text):
                 issues.append(ValidationIssue("persona_soft_gate", w, severity="warning"))
+    _checkpoint("persona_soft_gate", n)
 
+    n = len(issues)
     _scan_output_rupees_grounded(req_data, out_text, issues)
+    _checkpoint("rupee_pool_grounding", n)
+
+    n = len(issues)
+    if out_text.strip():
+        _screen_summary_compliance(out_text, issues)
+    _checkpoint("summary_compliance", n)
 
     errors = [i for i in issues if i.severity == "error"]
     return ValidationReport(ok=not errors, issues=issues)
@@ -1275,7 +1483,9 @@ _COMPLIANCE_HIGH_RISK: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\b(it\s+is\s+)?(best|better)\s+to\b", _FLAGS), "prescriptive_advice"),
     (re.compile(r"\b(recommended\s+to|strongly\s+recommend(?:ed)?\s+to)\b", _FLAGS), "prescriptive_advice"),
     (re.compile(r"\b(advised?\s+to)\b", _FLAGS), "prescriptive_advice"),
-    (re.compile(r"\b(please\s+)?(buy|sell|invest|apply|open|take|switch)\b", _FLAGS), "prescriptive_advice"),
+    (re.compile(r"\b(please\s+)(buy|sell|invest|apply|open|take|switch)\b", _FLAGS), "prescriptive_advice"),
+    (re.compile(r"\b(buy|sell|invest|apply|take|switch)\b", _FLAGS), "prescriptive_advice"),
+    (re.compile(r"\bopen\s+(a|an|your|the|new)\b", _FLAGS), "prescriptive_advice"),
 
     # B. Direct product solicitation
     (re.compile(
@@ -1413,7 +1623,53 @@ def screen_insight_compliance(text: str) -> list[ComplianceHit]:
         if m:
             hits.append(ComplianceHit(category=category, severity=severity, matched_text=m.group()))
 
+    if hits:
+        for h in hits:
+            logger.warning(
+                "validation.insight_compliance_hit category=%s severity=%s matched=%r",
+                h.category, h.severity, h.matched_text,
+            )
+    else:
+        logger.info("validation.check_passed check=insight_compliance")
     return hits
+
+
+def _screen_summary_compliance(
+    text: str, issues: list[ValidationIssue],
+) -> None:
+    """Run the shared compliance regexes against summary output text.
+
+    High-risk hits become errors (trigger retry); medium-risk become warnings.
+    Insight-specific patterns (_COMPLIANCE_INSIGHT_SPECIFIC) are skipped since
+    they target insight-only fallback text.
+    """
+    before = len(issues)
+
+    for pattern, category in _COMPLIANCE_HIGH_RISK:
+        m = pattern.search(text)
+        if m:
+            issues.append(ValidationIssue(
+                f"summary_compliance.{category}",
+                f"Compliance violation ({category}): matched '{m.group()}' in summary output.",
+                severity="error",
+            ))
+
+    for pattern, category in _COMPLIANCE_MEDIUM_RISK:
+        m = pattern.search(text)
+        if m:
+            issues.append(ValidationIssue(
+                f"summary_compliance.{category}",
+                f"Compliance flag ({category}): matched '{m.group()}' in summary output.",
+                severity="warning",
+            ))
+
+    new_issues = issues[before:]
+    if new_issues:
+        for iss in new_issues:
+            logger.warning(
+                "validation.summary_compliance_hit check_id=%s severity=%s message=%s",
+                iss.check_id, iss.severity, iss.message,
+            )
 
 
 # ── Section 9: Insight Post-LLM Validation ───────────────────────────────────
@@ -1458,6 +1714,8 @@ def validate_insight_structure(
     if "id" in parsed:
         parsed.pop("id", None)
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_structure theme=%s", expected_theme)
     return issues
 
 
@@ -1525,6 +1783,8 @@ def validate_insight_text_hygiene(text: str) -> list[ValidationIssue]:
             severity="error",
         ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_text_hygiene")
     return issues
 
 
@@ -1674,6 +1934,8 @@ def validate_insight_grounding(
                         severity="error",
                     ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_grounding theme=%s pillar=%s", theme_key, pillar)
     return issues
 
 
@@ -1851,6 +2113,8 @@ def validate_insight_theme_consistency(
                         severity="error",
                     ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_theme_consistency theme=%s pillar=%s", theme_key, pillar)
     return issues
 
 
@@ -1912,6 +2176,8 @@ def insight_quality_gate(
             severity="error",
         ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_quality_gate")
     return issues
 
 

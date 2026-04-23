@@ -1,6 +1,6 @@
 # ── System Prompt files ─────────────────────────────────────────────────────────────
 insight_system_prompt_file: "insight_system.txt"
-prompt_mode: "pillar_split"
+prompt_file: "summary_v13_gemini_wo_insights.txt"
 
 # ── LLM temperature ────────────────────────────────────────────
 temperature_summary: 0.3
@@ -21,6 +21,7 @@ max_validation_retries: 3
 
 # ── Gemini defaults (env vars override these when set) ──────────────────────
 gemini_model: "gemini-2.5-flash"
+gemini_max_output_tokens: 16384
 gemini_vertex_project: "aigateway"
 gemini_vertex_location: "global"
 gemini_http_api_version: "v1"

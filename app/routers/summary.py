@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import ValidationError
 
-from app.config import _DEFAULTS, get_config, PROMPTS_DIR, unlocked_pillars_from_metadata_types
+from app.config import _DEFAULTS, get_config, unlocked_pillars_from_metadata_types
 from app.core.exceptions import LLMValidationError
-from app.core.llm import load_prompt, nonnull_dict
+from app.core.llm import nonnull_dict
 from app.core.tracing import get_tracer
 from app.core.logging import (
     log_pipeline_result,
@@ -23,7 +23,7 @@ from app.models.summary import (
     SummaryResponse,
 )
 from app.services.summary.features import convert_category_spending_to_breakdown
-from app.services.summary.pipeline import run_pillar_split_summary, run_pillar_summary
+from app.services.summary.pipeline import run_pillar_split_summary
 from app.services.summary.response import (
     build_summary_response_metadata,
     summary_llm_failure_response,
@@ -96,28 +96,9 @@ async def generate_summary(req: SummaryRequest):
                 exc=e,
             )
 
-        prompt_mode = cfg.get("prompt_mode", "monolithic")
         prompt_file = cfg.get("prompt_file", _DEFAULTS["prompt_file"])
         span.set_attribute("unlocked_pillars", sorted(unlocked))
-        span.set_attribute("prompt_mode", prompt_mode)
         log_pipeline_run(request_id=request_id, prompt_file=prompt_file, unlocked_pillars=unlocked)
-
-        if prompt_mode != "pillar_split":
-            try:
-                load_prompt(prompt_file)
-            except FileNotFoundError as e:
-                available = sorted(
-                    {f.name for f in PROMPTS_DIR.glob("pillar_summary_*.txt")}
-                    | {f.name for f in PROMPTS_DIR.glob("summary_*.txt")}
-                )
-                return summary_logged_error(
-                    404,
-                    "PROMPT_NOT_FOUND",
-                    f"Prompt '{prompt_file}' not found. Available: {available}",
-                    request_id=request_id,
-                    stage="prompt_resolve",
-                    exc=e,
-                )
 
         try:
             pipeline_data = req.data.to_pipeline_dict()
@@ -152,20 +133,12 @@ async def generate_summary(req: SummaryRequest):
             if finbox_surplus is not None:
                 pipeline_data["finbox_surplus"] = finbox_surplus
 
-            if prompt_mode == "pillar_split":
-                result = await run_pillar_split_summary(
-                    data=pipeline_data,
-                    config=cfg,
-                    unlocked_pillars=unlocked,
-                    request_id=request_id,
-                )
-            else:
-                result = await run_pillar_summary(
-                    data=pipeline_data,
-                    config=cfg,
-                    unlocked_pillars=unlocked,
-                    request_id=request_id,
-                )
+            result = await run_pillar_split_summary(
+                data=pipeline_data,
+                config=cfg,
+                unlocked_pillars=unlocked,
+                request_id=request_id,
+            )
         except FileNotFoundError as e:
             return summary_logged_error(
                 404,
@@ -213,9 +186,8 @@ async def generate_summary(req: SummaryRequest):
         except LLMValidationError as e:
             details = [
                 {
-                    "check_id": i.check_id,
-                    "severity": i.severity,
-                    "issue": i.message,
+                    "field": i.check_id,
+                    "issue": f"[{i.severity.upper()}] {i.message}",
                 }
                 for i in e.report.issues
                 if i.severity == "error"

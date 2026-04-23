@@ -40,6 +40,7 @@ logging.basicConfig(
         logging.StreamHandler(),
         _file_handler,
     ],
+    force=True,
 )
 
 from fastapi import FastAPI, HTTPException, Request

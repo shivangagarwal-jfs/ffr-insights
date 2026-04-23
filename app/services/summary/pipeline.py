@@ -1,9 +1,7 @@
-"""Pillar-summary LLM pipeline: scoping, call/validate/retry, and result filtering.
+"""Pillar-summary LLM pipeline: per-pillar LLM calls + synthesis + validation.
 
-Supports two modes:
-  - **monolithic** (default): single LLM call with the full prompt.
-  - **pillar_split**: independent LLM calls per pillar + a synthesis call for
-    overall_summary.
+Runs independent LLM calls per pillar, a synthesis call for overall_summary,
+then post-LLM validation on the merged result.
 """
 
 from __future__ import annotations
@@ -18,16 +16,13 @@ from app.core.exceptions import LLMValidationError
 from app.core.llm import (
     build_pillar_user_message,
     build_synthesis_user_message,
-    build_user_message,
     call_llm,
     load_pillar_prompt,
-    load_prompt,
     load_synthesis_prompt,
     nonnull_dict,
     parse_llm_json,
 )
 from app.core.schemas import (
-    MONOLITHIC_SUMMARY_SCHEMA,
     PILLAR_SUMMARY_SCHEMA,
     SYNTHESIS_SCHEMA,
 )
@@ -35,13 +30,12 @@ from app.core.tracing import get_tracer
 from app.core.logging import (
     log_llm_input,
     log_llm_output,
-    log_parse_warning,
     log_validation_passed_after_retry,
     log_validation_result,
     log_validation_retry,
 )
-from app.models.common import VALID_PILLARS
 from app.validation.post_llm import (
+    ValidationIssue,
     ValidationReport,
     sanitize_llm_prose,
     strip_trailing_period,
@@ -49,129 +43,6 @@ from app.validation.post_llm import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ── Scope preamble / filter (monolithic path) ────────────────────────────────
-
-
-def _build_scope_preamble(unlocked: set[str]) -> str:
-    """Generate a system-prompt preamble that restricts LLM output to in-scope pillars."""
-    if unlocked >= VALID_PILLARS:
-        return ""
-    names = ", ".join(p.title() for p in sorted(unlocked))
-    locked = VALID_PILLARS - unlocked
-    locked_names = ", ".join(p.title() for p in sorted(locked))
-    return (
-        f"CRITICAL SCOPE RESTRICTION — READ BEFORE GENERATING ANY TEXT:\n"
-        f"This request includes analysis for ONLY: {names}.\n"
-        f"The following pillars are OUT OF SCOPE for this assessment: {locked_names}.\n\n"
-        "Rules:\n"
-        "1. metric_summaries — include ONLY metrics belonging to the in-scope pillars.\n"
-        "2. pillar_summaries — include ONLY summaries for the in-scope pillars.\n"
-        "3. overall_summary (object with overview, whats_going_well, whats_needs_attention) — "
-        "focus on the in-scope pillars. Do NOT analyse or "
-        "give advice about out-of-scope pillars. Treat out-of-scope pillar data as if it does "
-        "not exist. However, you MUST include ONE sentence in the overview acknowledging scope using "
-        "this pattern (adapt the bracketed part):\n"
-        f'   "{locked_names} {"is" if len(locked) == 1 else "are"} not part of this assessment, '
-        f"so the overall picture is shaped by [briefly describe in-scope insights].\"\n"
-        "   BANNED PHRASES for out-of-scope pillars — do NOT use any of these:\n"
-        '   - "can\'t be assessed"\n'
-        '   - "can\'t be evaluated"\n'
-        '   - "metrics are missing"\n'
-        '   - "underlying metrics aren\'t available"\n'
-        '   - "not enough data"\n'
-        '   - "data is not available"\n'
-        '   - "provided data"\n'
-        '   - "unlocked" / "not unlocked" / "locked" (gamified — use scope language instead)\n'
-        "4. Data fields for out-of-scope pillars are intentionally blanked out. "
-        "If you see empty values for certain metrics, do NOT speculate about them "
-        "or suggest the user address them.\n"
-        "5. The ALL-PILLARS COVERAGE CHECK applies ONLY to in-scope pillars — "
-        "you are NOT required to cover out-of-scope pillars beyond the single "
-        "scope acknowledgement sentence.\n\n"
-    )
-
-
-def _filter_llm_result(parsed: dict, unlocked: set[str]) -> dict:
-    """Strip LLM output entries that don't belong to unlocked pillars."""
-    allowed_metrics: set[str] = set()
-    for pillar in unlocked:
-        allowed_metrics.update(PILLAR_METRICS.get(pillar, []))
-
-    metric_summaries = {
-        k: sanitize_llm_prose(str(v))
-        for k, v in nonnull_dict(parsed.get("metric_summaries")).items()
-        if k in allowed_metrics
-    }
-
-    metric_summaries_ui = {
-        k: sanitize_llm_prose(str(v))
-        for k, v in nonnull_dict(parsed.get("metric_summaries_ui")).items()
-        if k in allowed_metrics
-    }
-
-    pillar_summaries = {
-        k: sanitize_llm_prose(str(v))
-        for k, v in nonnull_dict(parsed.get("pillar_summaries")).items()
-        if k in unlocked
-    }
-
-    raw_overall = parsed.get("overall_summary")
-    if isinstance(raw_overall, dict):
-        overall_summary = {
-            "overview": sanitize_llm_prose(str(raw_overall.get("overview") or "")),
-            "whats_going_well": [
-                strip_trailing_period(sanitize_llm_prose(str(item)))
-                for item in (raw_overall.get("whats_going_well") or [])
-                if isinstance(item, str) and item.strip()
-            ],
-            "whats_needs_attention": [
-                strip_trailing_period(sanitize_llm_prose(str(item)))
-                for item in (raw_overall.get("whats_needs_attention") or [])
-                if isinstance(item, str) and item.strip()
-            ],
-        }
-    else:
-        overall_summary = {
-            "overview": sanitize_llm_prose(str(raw_overall or "")),
-            "whats_going_well": [],
-            "whats_needs_attention": [],
-        }
-
-    return {
-        "metric_summaries": metric_summaries,
-        "metric_summaries_ui": metric_summaries_ui,
-        "pillar_summaries": pillar_summaries,
-        "overall_summary": overall_summary,
-    }
-
-
-def _format_validation_feedback(
-    raw_response: str | None,
-    report: ValidationReport,
-) -> str:
-    """Build a correction prompt from the previous LLM output and its validation failures."""
-    lines: list[str] = [
-        "Your previous JSON output failed validation. Here is your previous output:",
-        "```json",
-        raw_response or "(empty)",
-        "```",
-        "",
-        "Validation issues found:",
-    ]
-    for issue in report.issues:
-        tag = issue.severity.upper()
-        detail = f"- [{tag}] {issue.check_id}: {issue.message}"
-        if issue.expected:
-            detail += f" (expected: {issue.expected})"
-        lines.append(detail)
-    lines.append("")
-    lines.append(
-        "Fix ALL errors listed above and regenerate the COMPLETE JSON response. "
-        "Do NOT omit any fields."
-    )
-    return "\n".join(lines)
 
 
 # ── Data enrichment (derived fields computed before LLM call) ────────────────
@@ -487,151 +358,108 @@ def _enrich_data(data: dict) -> None:
     _compute_savings_dip_attribution(data)
 
 
-# ── Monolithic pipeline ──────────────────────────────────────────────────────
+# ── Validation feedback helpers ───────────────────────────────────────────────
+
+_METRIC_TO_PILLAR: dict[str, str] = {}
+for _p, _metrics in PILLAR_METRICS.items():
+    for _m in _metrics:
+        _METRIC_TO_PILLAR[_m] = _p
 
 
-async def run_pillar_summary(
-    data: dict,
-    config: dict,
-    unlocked_pillars: set[str],
-    *,
-    request_id: str | None = None,
-) -> dict[str, Any]:
-    """Run the full summary pipeline: prompt -> Gemini -> parse -> validate -> retry loop.
+def _format_validation_feedback(issues: list[ValidationIssue]) -> str:
+    """Build a correction prompt from validation failures."""
+    lines: list[str] = [
+        "Your previous output failed validation. Fix ALL errors below and "
+        "regenerate the COMPLETE JSON response. Do NOT omit any fields.",
+        "",
+        "Validation issues found:",
+    ]
+    for issue in issues:
+        tag = issue.severity.upper()
+        detail = f"- [{tag}] {issue.check_id}: {issue.message}"
+        if issue.expected:
+            detail += f" (expected: {issue.expected})"
+        lines.append(detail)
+    return "\n".join(lines)
 
-    Returns the filtered+validated summary dict on success; raises
-    LLMValidationError if validation fails after all retry attempts.
+
+def _classify_errors_by_source(
+    report: ValidationReport,
+    merged: dict[str, Any],
+) -> tuple[dict[str, list[ValidationIssue]], list[ValidationIssue]]:
+    """Split error-severity issues into per-pillar and synthesis buckets.
+
+    Returns (pillar_errors, synthesis_errors) where pillar_errors maps
+    pillar name -> list of issues caused by that pillar's LLM output,
+    and synthesis_errors are issues caused by the overall_summary.
     """
-    tracer = get_tracer(__name__)
-    with tracer.start_as_current_span(
-        "run_pillar_summary",
-        attributes={
-            "request_id": request_id or "",
-            "prompt_file": config.get("prompt_file", ""),
-        },
-    ) as pipeline_span:
-        data = dict(data)
-        _enrich_data(data)
-        prompt_file = config.get("prompt_file", _DEFAULTS["prompt_file"])
-        system_msg, user_template = load_prompt(prompt_file)
+    pillar_errors: dict[str, list[ValidationIssue]] = {}
+    synthesis_errors: list[ValidationIssue] = []
 
-        scope_preamble = _build_scope_preamble(unlocked_pillars)
-        if scope_preamble:
-            system_msg = scope_preamble + system_msg
+    for issue in report.issues:
+        if issue.severity != "error":
+            continue
 
-        original_user_msg = build_user_message(
-            user_template, data, config,
-            unlocked_pillars=unlocked_pillars,
-        )
+        cid = issue.check_id
 
-        customer_id = data.get("customer_id") or data.get("user_id")
+        if cid.startswith("overall_summary."):
+            synthesis_errors.append(issue)
+            continue
 
-        max_attempts = int(config.get("max_validation_retries", 3))
-        pipeline_span.set_attribute("max_attempts", max_attempts)
-        request_dict = {"metadata": {"request_id": request_id}, "data": data}
-        user_msg = original_user_msg
-        last_report: ValidationReport | None = None
+        if cid.startswith("word_count.metric_summaries."):
+            metric_key = cid.split(".", 2)[2]
+            pillar = _METRIC_TO_PILLAR.get(metric_key)
+            if pillar:
+                pillar_errors.setdefault(pillar, []).append(issue)
+                continue
 
-        for attempt in range(1, max_attempts + 1):
-            with tracer.start_as_current_span(
-                "summary_attempt",
-                attributes={"attempt": attempt, "max_attempts": max_attempts},
-            ) as attempt_span:
-                log_llm_input(
-                    request_id=request_id,
-                    customer_id=customer_id,
-                    endpoint="summary",
-                    system_msg=system_msg,
-                    user_msg=user_msg,
-                    attempt=attempt,
-                    max_attempts=max_attempts,
-                )
+        if cid.startswith("summary_compliance."):
+            _route_compliance_issue(issue, merged, pillar_errors, synthesis_errors)
+            continue
 
-                raw_response = await call_llm(system_msg, user_msg, config, response_schema=MONOLITHIC_SUMMARY_SCHEMA)
+        pillar = _METRIC_TO_PILLAR.get(cid)
+        if pillar:
+            pillar_errors.setdefault(pillar, []).append(issue)
+            continue
 
-                log_llm_output(
-                    request_id=request_id,
-                    customer_id=customer_id,
-                    endpoint="summary",
-                    raw_response=raw_response,
-                    attempt=attempt,
-                    max_attempts=max_attempts,
-                )
+        for metric_key, p in _METRIC_TO_PILLAR.items():
+            if metric_key in cid:
+                pillar_errors.setdefault(p, []).append(issue)
+                break
+        else:
+            synthesis_errors.append(issue)
 
-                with tracer.start_as_current_span("parse_llm_json"):
-                    parsed = parse_llm_json(raw_response)
+    return pillar_errors, synthesis_errors
 
-                if _llm_debug_enabled():
-                    raw = raw_response if raw_response is not None else ""
-                    print(f"\n========== LLM raw response (attempt {attempt}/{max_attempts}) ==========", flush=True)
-                    print(f"type={type(raw_response).__name__!r} len={len(raw)}", flush=True)
-                    print(raw, flush=True)
-                    print("========== parsed dict keys ==========", flush=True)
-                    print(list(parsed.keys()) if isinstance(parsed, dict) else parsed, flush=True)
-                    print("======================================\n", flush=True)
 
-                if not parsed and (raw_response or "").strip():
-                    log_parse_warning(
-                        request_id=request_id,
-                        attempt=attempt,
-                        max_attempts=max_attempts,
-                        raw_len=len(raw_response or ""),
-                    )
+def _route_compliance_issue(
+    issue: ValidationIssue,
+    merged: dict[str, Any],
+    pillar_errors: dict[str, list[ValidationIssue]],
+    synthesis_errors: list[ValidationIssue],
+) -> None:
+    """Route a summary_compliance error to the pillar or synthesis that caused it.
 
-                with tracer.start_as_current_span("_filter_llm_result"):
-                    filtered = _filter_llm_result(parsed, unlocked_pillars)
+    Extracts the matched text from the issue message and checks which part
+    of the merged output contains it.
+    """
+    import re as _re
+    m = _re.search(r"matched '([^']+)'", issue.message)
+    matched_text = m.group(1).lower() if m else ""
 
-                with tracer.start_as_current_span("validate_pillar_summary") as val_span:
-                    response_dict = {"data": filtered}
-                    last_report = validate_pillar_summary_response(
-                        request_dict, response_dict, strict_request_id=False,
-                    )
-                    error_count = sum(1 for i in last_report.issues if i.severity == "error")
-                    warn_count = sum(1 for i in last_report.issues if i.severity == "warning")
-                    val_span.set_attribute("validation.ok", last_report.ok)
-                    val_span.set_attribute("validation.errors", error_count)
-                    val_span.set_attribute("validation.warnings", warn_count)
+    if matched_text:
+        for pillar, summary_text in (merged.get("pillar_summaries") or {}).items():
+            if matched_text in summary_text.lower():
+                pillar_errors.setdefault(pillar, []).append(issue)
+                return
+        for mk, summary_text in (merged.get("metric_summaries") or {}).items():
+            if matched_text in summary_text.lower():
+                pillar = _METRIC_TO_PILLAR.get(mk)
+                if pillar:
+                    pillar_errors.setdefault(pillar, []).append(issue)
+                    return
 
-                log_validation_result(
-                    request_id=request_id,
-                    customer_id=customer_id,
-                    attempt=attempt,
-                    max_attempts=max_attempts,
-                    report=last_report,
-                )
-
-                if last_report.ok:
-                    attempt_span.set_attribute("validation.passed", True)
-                    if attempt > 1:
-                        log_validation_passed_after_retry(
-                            request_id=request_id,
-                            attempt=attempt,
-                            max_attempts=max_attempts,
-                        )
-                    pipeline_span.set_attribute("final_attempt", attempt)
-                    return filtered
-
-                attempt_span.set_attribute("validation.passed", False)
-                if attempt < max_attempts:
-                    feedback = _format_validation_feedback(raw_response, last_report)
-                    user_msg = original_user_msg + "\n\n" + feedback
-                    log_validation_retry(
-                        request_id=request_id,
-                        attempt=attempt,
-                        max_attempts=max_attempts,
-                    )
-
-        error_issues = [
-            {"check_id": i.check_id, "severity": i.severity, "message": i.message}
-            for i in (last_report.issues if last_report else [])
-            if i.severity == "error"
-        ]
-        raise LLMValidationError(
-            f"LLM output failed validation after {max_attempts} attempts "
-            f"({len(error_issues)} error(s) remain).",
-            report=last_report,  # type: ignore[arg-type]
-            attempts=max_attempts,
-        )
+    synthesis_errors.append(issue)
 
 
 # ── Pillar-split pipeline ────────────────────────────────────────────────────
@@ -643,14 +471,19 @@ async def _call_single_pillar(
     config: dict,
     *,
     request_id: str | None = None,
+    feedback: str | None = None,
 ) -> dict[str, Any]:
     """Run a single-pillar LLM call with retry. Returns parsed pillar output dict.
+
+    When *feedback* is provided (validation retry), it is appended to the user
+    message on the first attempt so the LLM can self-correct.
 
     Raises LLMValidationError if no valid output is produced after all retries.
     """
     tracer = get_tracer(__name__)
     system_msg, user_template = load_pillar_prompt(pillar)
-    user_msg = build_pillar_user_message(pillar, user_template, data, config)
+    base_user_msg = build_pillar_user_message(pillar, user_template, data, config)
+    user_msg = f"{base_user_msg}\n\n{feedback}" if feedback else base_user_msg
 
     customer_id = data.get("customer_id") or data.get("user_id")
     max_attempts = int(config.get("max_validation_retries", 2))
@@ -728,14 +561,19 @@ async def _call_synthesis(
     pillar_outputs: dict[str, dict],
     *,
     request_id: str | None = None,
+    feedback: str | None = None,
 ) -> dict[str, Any]:
     """Run the synthesis LLM call to produce overall_summary.
+
+    When *feedback* is provided (validation retry), it is appended to the user
+    message on the first attempt so the LLM can self-correct.
 
     Raises LLMValidationError if no valid output is produced after all retries.
     """
     tracer = get_tracer(__name__)
     system_msg, user_template = load_synthesis_prompt()
-    user_msg = build_synthesis_user_message(user_template, data, config, pillar_outputs)
+    base_user_msg = build_synthesis_user_message(user_template, data, config, pillar_outputs)
+    user_msg = f"{base_user_msg}\n\n{feedback}" if feedback else base_user_msg
 
     customer_id = data.get("customer_id") or data.get("user_id")
     max_attempts = int(config.get("max_validation_retries", 2))
@@ -827,7 +665,7 @@ async def run_pillar_split_summary(
 ) -> dict[str, Any]:
     """Run the pillar-split pipeline: concurrent pillar calls -> merge -> synthesis call.
 
-    Returns the same shaped dict as the monolithic ``run_pillar_summary``.
+    Returns a dict with metric_summaries, metric_summaries_ui, pillar_summaries, overall_summary.
     Raises LLMValidationError or RuntimeError if any pillar or synthesis call fails.
     """
     tracer = get_tracer(__name__)
@@ -903,9 +741,135 @@ async def run_pillar_split_summary(
             merged_metric_summaries_ui.update(po.get("metric_summaries_ui", {}))
             merged_pillar_summaries[pillar] = po.get("pillar_summary", "")
 
-        return {
+        merged = {
             "metric_summaries": merged_metric_summaries,
             "metric_summaries_ui": merged_metric_summaries_ui,
             "pillar_summaries": merged_pillar_summaries,
             "overall_summary": synthesis["overall_summary"],
         }
+
+        # Phase 4: validate merged result with retry loop
+        customer_id = data.get("customer_id") or data.get("user_id")
+        max_val_attempts = int(config.get("max_validation_retries", 3))
+
+        for val_attempt in range(1, max_val_attempts + 1):
+            with tracer.start_as_current_span(
+                "validate_pillar_summary",
+                attributes={"val_attempt": val_attempt},
+            ) as val_span:
+                request_dict = {"metadata": {"request_id": request_id}, "data": data}
+                response_dict = {"data": merged}
+                report = validate_pillar_summary_response(
+                    request_dict, response_dict, strict_request_id=False,
+                )
+                error_count = sum(1 for i in report.issues if i.severity == "error")
+                warn_count = sum(1 for i in report.issues if i.severity == "warning")
+                val_span.set_attribute("validation.ok", report.ok)
+                val_span.set_attribute("validation.errors", error_count)
+                val_span.set_attribute("validation.warnings", warn_count)
+
+            log_validation_result(
+                request_id=request_id,
+                customer_id=customer_id,
+                attempt=val_attempt,
+                max_attempts=max_val_attempts,
+                report=report,
+            )
+
+            if report.ok or error_count == 0:
+                if val_attempt > 1:
+                    log_validation_passed_after_retry(
+                        request_id=request_id,
+                        attempt=val_attempt,
+                        max_attempts=max_val_attempts,
+                    )
+                span.set_attribute("validation.passed", True)
+                return merged
+
+            if val_attempt >= max_val_attempts:
+                break
+
+            # Classify errors and build targeted retry tasks
+            pillar_errors, synthesis_errors = _classify_errors_by_source(report, merged)
+
+            logger.warning(
+                "pillar_split validation failed request_id=%s attempt=%d/%d "
+                "errors=%d warnings=%d — retrying",
+                request_id, val_attempt, max_val_attempts,
+                error_count, warn_count,
+            )
+            log_validation_retry(
+                request_id=request_id,
+                attempt=val_attempt,
+                max_attempts=max_val_attempts,
+            )
+
+            # Build all retry coroutines and run them concurrently
+            retry_coros: list[asyncio.Task] = []
+            retry_pillar_names: list[str] = []
+            retry_has_synthesis = False
+
+            for pillar, issues_for_pillar in pillar_errors.items():
+                if pillar not in active_pillars:
+                    continue
+                feedback_text = _format_validation_feedback(issues_for_pillar)
+                logger.info(
+                    "validation.retry_pillar request_id=%s pillar=%s "
+                    "attempt=%d/%d error_count=%d",
+                    request_id, pillar, val_attempt, max_val_attempts,
+                    len(issues_for_pillar),
+                )
+                retry_coros.append(
+                    _call_single_pillar(
+                        pillar, data, config,
+                        request_id=request_id,
+                        feedback=feedback_text,
+                    )
+                )
+                retry_pillar_names.append(pillar)
+
+            if synthesis_errors:
+                feedback_text = _format_validation_feedback(synthesis_errors)
+                logger.info(
+                    "validation.retry_synthesis request_id=%s "
+                    "attempt=%d/%d error_count=%d",
+                    request_id, val_attempt, max_val_attempts,
+                    len(synthesis_errors),
+                )
+                retry_coros.append(
+                    _call_synthesis(
+                        data, config, pillar_outputs,
+                        request_id=request_id,
+                        feedback=feedback_text,
+                    )
+                )
+                retry_has_synthesis = True
+
+            # Single concurrent await for all retries
+            retry_results = await asyncio.gather(*retry_coros)
+
+            # Apply results back to merged
+            for idx, pillar in enumerate(retry_pillar_names):
+                new_output = retry_results[idx]
+                pillar_outputs[pillar] = new_output
+                merged["metric_summaries"].update(new_output.get("metric_summaries", {}))
+                merged["metric_summaries_ui"].update(new_output.get("metric_summaries_ui", {}))
+                merged["pillar_summaries"][pillar] = new_output.get("pillar_summary", "")
+
+            if retry_has_synthesis:
+                new_synthesis = retry_results[-1]
+                merged["overall_summary"] = new_synthesis["overall_summary"]
+
+        # All retry attempts exhausted — raise
+        logger.warning(
+            "pillar_split validation exhausted request_id=%s attempts=%d "
+            "errors=%d warnings=%d",
+            request_id, max_val_attempts, error_count, warn_count,
+        )
+        span.set_attribute("validation.passed", False)
+        raise LLMValidationError(
+            f"Validation failed after {max_val_attempts} attempts "
+            f"({error_count} errors remain).",
+            report=report,
+            attempts=max_val_attempts,
+        )
