@@ -54,7 +54,7 @@ _DEFAULTS: dict[str, Any] = {
     "insight_system_prompt_file": "insight_system_2.txt",
     "temperature_summary": 0.3,
     "temperature_insights": 0.7,
-    "max_tokens_insight": 2048,
+    "max_tokens_insight": 8192,
     "max_tokens_pillar": 4096,
     "max_tokens_synthesis": 4096,
     "max_tokens": 1024,

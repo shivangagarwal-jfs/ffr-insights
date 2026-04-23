@@ -26,6 +26,11 @@ from app.core.llm import (
     nonnull_dict,
     parse_llm_json,
 )
+from app.core.schemas import (
+    MONOLITHIC_SUMMARY_SCHEMA,
+    PILLAR_SUMMARY_SCHEMA,
+    SYNTHESIS_SCHEMA,
+)
 from app.core.tracing import get_tracer
 from app.core.logging import (
     log_llm_input,
@@ -542,7 +547,7 @@ async def run_pillar_summary(
                     max_attempts=max_attempts,
                 )
 
-                raw_response = await call_llm(system_msg, user_msg, config)
+                raw_response = await call_llm(system_msg, user_msg, config, response_schema=MONOLITHIC_SUMMARY_SCHEMA)
 
                 log_llm_output(
                     request_id=request_id,
@@ -666,7 +671,7 @@ async def _call_single_pillar(
             )
 
             pillar_budget = int(config.get("max_tokens_pillar", _DEFAULTS.get("max_tokens_pillar", 4096)))
-            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=pillar_budget)
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=pillar_budget, response_schema=PILLAR_SUMMARY_SCHEMA)
 
             log_llm_output(
                 request_id=request_id,
@@ -751,7 +756,7 @@ async def _call_synthesis(
             )
 
             synthesis_budget = int(config.get("max_tokens_synthesis", _DEFAULTS.get("max_tokens_synthesis", 4096)))
-            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=synthesis_budget)
+            raw_response = await call_llm(system_msg, user_msg, config, max_tokens_override=synthesis_budget, response_schema=SYNTHESIS_SCHEMA)
 
             log_llm_output(
                 request_id=request_id,

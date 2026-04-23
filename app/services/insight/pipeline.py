@@ -18,6 +18,7 @@ from app.core.llm import (
     get_insight_system_prompt,
     parse_llm_json_optional,
 )
+from app.core.schemas import INSIGHT_SCHEMA
 from app.core.logging import (
     log_insight_exception,
     log_insight_info,
@@ -481,6 +482,7 @@ async def _llm_generate_insight(
                     cfg,
                     _resolve_max_output_tokens(cfg),
                     temperature=_temperature_from_config(cfg, "temperature_insights", 0.7),
+                    response_schema=INSIGHT_SCHEMA,
                 )
                 text = raw_text.strip()
 

@@ -478,10 +478,14 @@ async def _call_gemini(
     max_tokens: int,
     *,
     temperature: float | None = None,
+    response_schema: dict | None = None,
 ) -> str:
     """Call Gemini with context caching and tracing support.
 
     If ``temperature`` is None, uses ``temperature_summary`` from ``config``.
+    When *response_schema* is provided it is passed as
+    ``response_json_schema`` for constrained decoding (requires
+    ``response_mime_type="application/json"``).
     """
     tracer = get_tracer(__name__)
     model = config.get("gemini_model", _DEFAULTS["gemini_model"])
@@ -504,20 +508,18 @@ async def _call_gemini(
         cached_name = await _get_or_create_context_cache(client, model, system_msg, config)
         span.set_attribute("llm.context_cache", bool(cached_name))
 
+        _base_kwargs: dict = dict(
+            temperature=temp,
+            max_output_tokens=max_tokens,
+            response_mime_type="application/json",
+        )
+        if response_schema is not None:
+            _base_kwargs["response_json_schema"] = response_schema
+
         if cached_name:
-            cfg = genai_types.GenerateContentConfig(
-                cached_content=cached_name,
-                temperature=temp,
-                max_output_tokens=max_tokens,
-                response_mime_type="application/json",
-            )
+            cfg = genai_types.GenerateContentConfig(cached_content=cached_name, **_base_kwargs)
         else:
-            cfg = genai_types.GenerateContentConfig(
-                system_instruction=system_msg,
-                temperature=temp,
-                max_output_tokens=max_tokens,
-                response_mime_type="application/json",
-            )
+            cfg = genai_types.GenerateContentConfig(system_instruction=system_msg, **_base_kwargs)
 
         try:
             response = await asyncio.to_thread(
@@ -527,43 +529,78 @@ async def _call_gemini(
                 config=cfg,
             )
         except Exception as first_exc:
-            span.add_event("gemini_json_mime_retry", {"error": str(first_exc)})
+            # Tier-1 fallback: keep MIME type but drop schema constraint
+            span.add_event("gemini_schema_fallback", {"error": str(first_exc)})
             log_gemini_retry(
-                "Gemini generate_content with JSON mime type failed (%s); retrying without response_mime_type",
+                "Gemini generate_content with JSON schema failed (%s); retrying with MIME type only",
                 first_exc,
             )
-            if cached_name:
-                fallback_cfg = genai_types.GenerateContentConfig(
-                    cached_content=cached_name,
-                    temperature=temp,
-                    max_output_tokens=max_tokens,
-                )
-            else:
-                fallback_cfg = genai_types.GenerateContentConfig(
-                    system_instruction=system_msg,
-                    temperature=temp,
-                    max_output_tokens=max_tokens,
-                )
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model=model,
-                contents=user_msg,
-                config=fallback_cfg,
+            _mime_kwargs: dict = dict(
+                temperature=temp,
+                max_output_tokens=max_tokens,
+                response_mime_type="application/json",
             )
+            if cached_name:
+                fallback_cfg = genai_types.GenerateContentConfig(cached_content=cached_name, **_mime_kwargs)
+            else:
+                fallback_cfg = genai_types.GenerateContentConfig(system_instruction=system_msg, **_mime_kwargs)
+            try:
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
+                    model=model,
+                    contents=user_msg,
+                    config=fallback_cfg,
+                )
+            except Exception as second_exc:
+                # Tier-2 fallback: drop all JSON constraints
+                span.add_event("gemini_mime_fallback", {"error": str(second_exc)})
+                log_gemini_retry(
+                    "Gemini generate_content with JSON MIME failed (%s); retrying without any JSON constraint",
+                    second_exc,
+                )
+                if cached_name:
+                    bare_cfg = genai_types.GenerateContentConfig(
+                        cached_content=cached_name, temperature=temp, max_output_tokens=max_tokens,
+                    )
+                else:
+                    bare_cfg = genai_types.GenerateContentConfig(
+                        system_instruction=system_msg, temperature=temp, max_output_tokens=max_tokens,
+                    )
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
+                    model=model,
+                    contents=user_msg,
+                    config=bare_cfg,
+                )
 
         text = _gemini_response_text(response)
         span.set_attribute("llm.response_chars", len(text))
 
+        cand = (getattr(response, "candidates", None) or [None])[0]
+        fr = getattr(cand, "finish_reason", None) if cand else None
+        um = getattr(response, "usage_metadata", None)
+        span.set_attribute("llm.finish_reason", str(fr) if fr else "unknown")
+
         if _llm_debug_enabled():
-            cand = (getattr(response, "candidates", None) or [None])[0]
-            fr = getattr(cand, "finish_reason", None) if cand else None
-            um = getattr(response, "usage_metadata", None)
             print(
                 f"[gemini] max_output_tokens_requested={max_tokens} "
                 f"finish_reason={fr!s} usage_metadata={um!s} "
                 f"cached_content={'yes' if cached_name else 'no'}",
                 flush=True,
             )
+
+        if str(fr) in ("MAX_TOKENS", "FinishReason.MAX_TOKENS", "2"):
+            logger.warning(
+                "Gemini response truncated (finish_reason=%s, max_output_tokens=%d, "
+                "response_chars=%d) — output likely incomplete",
+                fr, max_tokens, len(text),
+            )
+            span.add_event("gemini_truncated", {
+                "finish_reason": str(fr),
+                "max_output_tokens": max_tokens,
+                "response_chars": len(text),
+            })
+            return ""
 
         if not text.strip():
             pf = getattr(response, "prompt_feedback", None)
@@ -579,12 +616,17 @@ async def call_llm(
     user_msg: str,
     config: dict,
     max_tokens_override: int | None = None,
+    *,
+    response_schema: dict | None = None,
 ) -> str:
     """High-level Gemini call with token budget resolution and floor enforcement.
 
     When *max_tokens_override* is provided it is used directly — the global
     floor is only applied to the auto-resolved budget so that callers like
     ``_call_single_pillar`` and ``_call_synthesis`` can request smaller budgets.
+
+    *response_schema*, when given, is forwarded to ``_call_gemini`` for
+    constrained decoding via ``response_json_schema``.
     """
     tracer = get_tracer(__name__)
     with tracer.start_as_current_span("call_llm"):
@@ -604,7 +646,7 @@ async def call_llm(
                 floor = _DEFAULTS["gemini_max_output_tokens"]
             max_tokens = max(max_tokens, floor)
 
-        return await _call_gemini(system_msg, user_msg, config, max_tokens)
+        return await _call_gemini(system_msg, user_msg, config, max_tokens, response_schema=response_schema)
 
 
 # ── JSON parsing ─────────────────────────────────────────────────────────────
@@ -640,7 +682,11 @@ def _first_json_object_slice(s: str) -> str | None:
 
 
 def parse_llm_json(raw: str | None) -> dict:
-    """Parse model output into a dict; tolerates fences and leading prose around JSON."""
+    """Parse model output into a dict; tolerates fences and leading prose around JSON.
+
+    Falls back to ``json_repair`` for common LLM mistakes (trailing commas,
+    single quotes, unescaped newlines) before giving up.
+    """
     if raw is None:
         return {}
     cleaned = raw.strip()
@@ -666,6 +712,20 @@ def parse_llm_json(raw: str | None) -> dict:
                 return data
         except json.JSONDecodeError:
             pass
+
+    try:
+        import json_repair  # lazy import to keep startup fast
+        repaired = json_repair.loads(cleaned)
+        if isinstance(repaired, dict):
+            logger.info("parse_llm_json: recovered via json_repair (raw_len=%d)", len(cleaned))
+            return repaired
+    except Exception:
+        pass
+
+    logger.warning(
+        "parse_llm_json: all parse strategies failed — raw_len=%d first_200=%.200s",
+        len(cleaned), cleaned,
+    )
     return {}
 
 

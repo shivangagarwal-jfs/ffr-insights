@@ -18,6 +18,7 @@ All validation checks live in `app/validation/post_llm.py` and are invoked after
 | Check | ID / Function | Applies To | Severity | Description |
 |-------|---------------|------------|----------|-------------|
 | Word-count annotation stripping | `sanitize_llm_prose()` | **B** | — | Strips `(20-25 words)`, `[23 words]`, `Word count: N` annotations and editor debris from LLM output before any further processing. |
+| Trailing period removal | `strip_trailing_period()` | **S** | — | Removes a single trailing full-stop from overall_summary bullet items (`whats_going_well`, `whats_needs_attention`) after `sanitize_llm_prose`. |
 
 ---
 
@@ -126,7 +127,7 @@ All checks below apply **only to the Insights endpoint (I)**.
 | Check | Function | Severity | Description |
 |-------|----------|----------|-------------|
 | Generic placeholder detection | `is_generic_placeholder()` | error | Rejects throwaway descriptions like "Recent spending is around ₹X" without any comparative or analytical content. Triggers on descriptions < 12 chars or matching known generic patterns. |
-| Overloaded description detection | `is_overloaded_description()` | error | Rejects descriptions that are too dense: > 29 words, > 320 chars, > 3 INR mentions, or > 3 sentences. |
+| Overloaded description detection | `is_overloaded_description()` | error | Rejects descriptions that are too dense or empty: > 29 words, > 320 chars, > 3 INR mentions, > 3 sentences, or empty string. |
 
 ### 4.3 Insight Text Hygiene — `validate_insight_text_hygiene()`
 
@@ -134,7 +135,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
-| Internal JSON key leak | `insight_hygiene.json_key_leak` | error | Detects ~30+ internal field names (e.g. `spend_to_income_ratio`, `emi_burden`, `category_spending_profile`) leaked into user-facing text. |
+| Internal JSON key leak | `insight_hygiene.json_key_leak` | error | Detects ~35+ internal field names (e.g. `spend_to_income_ratio`, `emi_burden`, `category_spending_profile`, `aggregate_spends_m1_m3`, `expense_profile_merchants`, `total_essential_spend`, `amt_debit_txn`, `subscription_features`, `periodic_spike`, `bill_profile`, `upi_features`, `income_features`, `account_overview`, `liquid_instruments`, `finbox`) leaked into user-facing text. |
 | Markdown formatting leak | `insight_hygiene.markdown_leak` | error | Detects `**bold**`, `## headings`, bullet lists (`- `), or `` `code` `` in output. |
 | Reasoning chain leak | `insight_hygiene.reasoning_leak` | error | Detects chain-of-thought prefixes like "Based on the data", "Looking at the JSON", "Analyzing the", "Let me", etc. |
 
@@ -142,11 +143,11 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
-| Amount grounding | `insight_grounding.amount` | error | Every amount-like number in the insight must trace to the theme payload (exact, near ±2%, or derivable via 2-3 value sum/diff/avg). |
+| Amount grounding | `insight_grounding.amount` | warning | Every amount-like number in the insight must trace to the theme payload (exact, near ±2%, or derivable via 2-3 value sum/diff/avg, division/product of pairs, percentage-of-total `(a/b)*100`, or division by small integers 2/3/4/6/12 for monthly averages). |
 | Percentage grounding | `insight_grounding.percentage` | warning | Every percentage must match a ratio (×100) or a direct percentage value in the theme payload (±3%). |
-| Credit score grounding | `insight_grounding.credit_score` | error | For borrowing/credit_score themes: 3-digit scores must match the `credit_score` series. |
-| Tax saving index grounding | `insight_grounding.out_of_pattern` | error | For tax themes: "N out of …" must match `tax_saving_index`. |
-| Saving consistency grounding | `insight_grounding.saving_consistency` | error | For liquidity themes: "N out of M" must match the saving_consistency trailing window sum. |
+| Credit score grounding | `insight_grounding.credit_score` | error | For borrowing pillar + credit_score themes: 3-digit scores must match the `credit_score` series. |
+| Tax saving index grounding | `insight_grounding.out_of_pattern` | error | For `tax_saving_utilization` / `tax_savings` themes: "N out of …" must match `tax_saving_index`. |
+| Saving consistency grounding | `insight_grounding.saving_consistency` | error | For `liquidity_resilience` theme: "N out of M" must match the saving_consistency trailing window sum. |
 
 ### 4.5 Theme-Specific Consistency — `validate_insight_theme_consistency()`
 
@@ -158,7 +159,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 | Tax filing status consistency | `insight_theme.tax_filing_status` | error | `tax_filing_discipline` | Filing-current language must not appear when status is negative, and vice versa. |
 | Portfolio concentration mention | `insight_theme.portfolio_concentration` | warning | `portfolio_diversification_review` | When one asset class > 50%, the insight should mention concentration. |
 | Regime mismatch | `insight_theme.regime_mismatch` | warning | `regime_optimization` | Old-regime concepts (80C/80D, NPS) must not appear when `tax_regime='new'`. |
-| Subscription zero data | `insight_theme.subscription_zero_data` | error | `subscription_features` | Must not cite monetary amounts when all subscription feature values are 0. |
+| Subscription zero data | `insight_theme.subscription_zero_data` | error | `subscription_features` | Must not cite monetary amounts when all subscription feature values are 0 or non-numeric. |
 | EMI burden direction | `insight_theme.emi_direction` | error | `emi_pressure`, `debt_concentration` | Eased/worsened language must match actual EMI burden trend. |
 | Investment rate direction | `insight_theme.investment_direction` | error | `investment_momentum`, `investment_consistency` | Increased/declined language must match actual investment rate trend. |
 
@@ -222,6 +223,7 @@ Runs regex-based compliance checks against concatenated insight text (headline +
 ```
 LLM response
   → sanitize_llm_prose (strip word-count annotations)
+  → strip_trailing_period (remove trailing full-stop from bullet items)
   → validate_pillar_summary()
       ├── Structural: request data, response text, request_id
       ├── Word-count limits on all output fields
@@ -243,7 +245,7 @@ Per-insight (per theme):
     → validate_insight_structure (schema shape)
     → sanitize_llm_prose (strip annotations)
     → is_generic_placeholder (reject throwaway text)
-    → is_overloaded_description (reject dense text)
+    → is_overloaded_description (reject dense or empty text)
     → validate_insight_text_hygiene (banned terms + JSON key/markdown/reasoning leaks)
     → validate_insight_grounding (amounts, %, credit scores, tax index, savings)
     → validate_insight_theme_consistency (domain logic per theme)
