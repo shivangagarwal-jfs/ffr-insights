@@ -903,9 +903,46 @@ async def run_pillar_split_summary(
             merged_metric_summaries_ui.update(po.get("metric_summaries_ui", {}))
             merged_pillar_summaries[pillar] = po.get("pillar_summary", "")
 
-        return {
+        merged = {
             "metric_summaries": merged_metric_summaries,
             "metric_summaries_ui": merged_metric_summaries_ui,
             "pillar_summaries": merged_pillar_summaries,
             "overall_summary": synthesis["overall_summary"],
         }
+
+        # Phase 4: run post-LLM validation on merged result
+        with tracer.start_as_current_span("validate_pillar_summary") as val_span:
+            request_dict = {"metadata": {"request_id": request_id}, "data": data}
+            response_dict = {"data": merged}
+            report = validate_pillar_summary_response(
+                request_dict, response_dict, strict_request_id=False,
+            )
+            error_count = sum(1 for i in report.issues if i.severity == "error")
+            warn_count = sum(1 for i in report.issues if i.severity == "warning")
+            val_span.set_attribute("validation.ok", report.ok)
+            val_span.set_attribute("validation.errors", error_count)
+            val_span.set_attribute("validation.warnings", warn_count)
+
+        customer_id = data.get("customer_id") or data.get("user_id")
+        log_validation_result(
+            request_id=request_id,
+            customer_id=customer_id,
+            attempt=1,
+            max_attempts=1,
+            report=report,
+        )
+
+        if not report.ok:
+            error_issues = [
+                {"check_id": i.check_id, "severity": i.severity, "message": i.message}
+                for i in report.issues
+                if i.severity == "error"
+            ]
+            logger.warning(
+                "pillar_split validation failed request_id=%s errors=%d warnings=%d",
+                request_id, error_count, warn_count,
+            )
+            span.set_attribute("validation.passed", False)
+
+        span.set_attribute("validation.passed", report.ok)
+        return merged

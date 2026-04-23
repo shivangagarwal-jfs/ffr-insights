@@ -12,9 +12,12 @@ Audit layer (build_validation_audit, CheckAuditEntry) lives in services/summary/
 from __future__ import annotations
 
 import itertools
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Set
+
+logger = logging.getLogger(__name__)
 
 
 # ── Section 1: Core Types ────────────────────────────────────────────────────
@@ -1008,23 +1011,33 @@ def validate_pillar_summary(
     """Full summary validation: request_id, word caps, grounding, hygiene, tax_regime, rupee pool, directional trends."""
     issues: list[ValidationIssue] = []
 
+    def _checkpoint(check_name: str, before: int) -> None:
+        if len(issues) == before:
+            logger.info("validation.check_passed check=%s", check_name)
+
     req_meta = request.get("metadata")
     req_data = request.get("data")
+    n = len(issues)
     if not isinstance(req_data, Mapping):
         issues.append(ValidationIssue("request.data", "Request has no data object.", severity="error"))
         req_data = {}
-
     out_text = _concat_output_text(response)
     if not out_text.strip():
         issues.append(ValidationIssue("response.empty", "No summary text found under response.data.", severity="error"))
+    _checkpoint("structural", n)
 
+    n = len(issues)
     resp_data = response.get("data")
     if isinstance(resp_data, Mapping):
         issues.extend(_validate_summary_word_counts(resp_data))
+    _checkpoint("word_count", n)
 
+    n = len(issues)
     if out_text.strip():
         issues.extend(validate_text_hygiene(out_text))
+    _checkpoint("text_hygiene", n)
 
+    n = len(issues)
     if strict_request_id and isinstance(req_meta, Mapping):
         rid_in = str(req_meta.get("request_id") or "")
         out_meta = response.get("metadata")
@@ -1034,6 +1047,7 @@ def validate_pillar_summary(
                 "metadata.request_id", "Output request_id does not match input.",
                 expected=rid_in, severity="error",
             ))
+    _checkpoint("request_id_match", n)
 
     rd: Mapping[str, Any] | None = resp_data if isinstance(resp_data, Mapping) else None
 
@@ -1045,6 +1059,7 @@ def validate_pillar_summary(
             severity=severity,
         ))
 
+    n = len(issues)
     if rd is not None:
         sc = _safe_metric(rd, "spend_to_income_ratio")
         if sc:
@@ -1107,9 +1122,15 @@ def validate_pillar_summary(
         if sc:
             for msg in _output_tax_filing_claims_consistent(sc, req_data):
                 _append_metric_fail("tax_filing_status", "tax_filing_status", msg)
+    _checkpoint("metric_grounding", n)
 
+    n = len(issues)
+    if rd is not None:
         issues.extend(_validate_directional_metric_lines(req_data, rd))
+    _checkpoint("directional_trends", n)
 
+    n = len(issues)
+    if rd is not None:
         _raw_overall = (rd or {}).get("overall_summary")
         if isinstance(_raw_overall, Mapping):
             _ov_parts = [str(_raw_overall.get("overview") or "")]
@@ -1160,7 +1181,9 @@ def validate_pillar_summary(
                 _append_overall_fail("saving_consistency", "saving_consistency", msg)
             for msg in _output_tax_filing_claims_consistent(overall_text, req_data):
                 _append_overall_fail("tax_filing_status", "tax_filing_status", msg)
+    _checkpoint("overall_summary_grounding", n)
 
+    n = len(issues)
     tr = req_data.get("tax_regime")
     tr_norm = _normalize_tax_regime(tr)
     if rd is not None:
@@ -1186,7 +1209,9 @@ def validate_pillar_summary(
                     f"regime is 'old').",
                     expected="new", severity="warning",
                 ))
+    _checkpoint("tax_regime", n)
 
+    n = len(issues)
     try:
         from app.persona.personas import soft_output_warnings
     except ImportError:
@@ -1200,8 +1225,16 @@ def validate_pillar_summary(
         if has_persona_ctx:
             for w in soft_output_warnings(req_data, out_text):
                 issues.append(ValidationIssue("persona_soft_gate", w, severity="warning"))
+    _checkpoint("persona_soft_gate", n)
 
+    n = len(issues)
     _scan_output_rupees_grounded(req_data, out_text, issues)
+    _checkpoint("rupee_pool_grounding", n)
+
+    n = len(issues)
+    if out_text.strip():
+        _screen_summary_compliance(out_text, issues)
+    _checkpoint("summary_compliance", n)
 
     errors = [i for i in issues if i.severity == "error"]
     return ValidationReport(ok=not errors, issues=issues)
@@ -1413,7 +1446,53 @@ def screen_insight_compliance(text: str) -> list[ComplianceHit]:
         if m:
             hits.append(ComplianceHit(category=category, severity=severity, matched_text=m.group()))
 
+    if hits:
+        for h in hits:
+            logger.warning(
+                "validation.insight_compliance_hit category=%s severity=%s matched=%r",
+                h.category, h.severity, h.matched_text,
+            )
+    else:
+        logger.info("validation.check_passed check=insight_compliance")
     return hits
+
+
+def _screen_summary_compliance(
+    text: str, issues: list[ValidationIssue],
+) -> None:
+    """Run the shared compliance regexes against summary output text.
+
+    High-risk hits become errors (trigger retry); medium-risk become warnings.
+    Insight-specific patterns (_COMPLIANCE_INSIGHT_SPECIFIC) are skipped since
+    they target insight-only fallback text.
+    """
+    before = len(issues)
+
+    for pattern, category in _COMPLIANCE_HIGH_RISK:
+        m = pattern.search(text)
+        if m:
+            issues.append(ValidationIssue(
+                f"summary_compliance.{category}",
+                f"Compliance violation ({category}): matched '{m.group()}' in summary output.",
+                severity="error",
+            ))
+
+    for pattern, category in _COMPLIANCE_MEDIUM_RISK:
+        m = pattern.search(text)
+        if m:
+            issues.append(ValidationIssue(
+                f"summary_compliance.{category}",
+                f"Compliance flag ({category}): matched '{m.group()}' in summary output.",
+                severity="warning",
+            ))
+
+    new_issues = issues[before:]
+    if new_issues:
+        for iss in new_issues:
+            logger.warning(
+                "validation.summary_compliance_hit check_id=%s severity=%s message=%s",
+                iss.check_id, iss.severity, iss.message,
+            )
 
 
 # ── Section 9: Insight Post-LLM Validation ───────────────────────────────────
@@ -1458,6 +1537,8 @@ def validate_insight_structure(
     if "id" in parsed:
         parsed.pop("id", None)
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_structure theme=%s", expected_theme)
     return issues
 
 
@@ -1525,6 +1606,8 @@ def validate_insight_text_hygiene(text: str) -> list[ValidationIssue]:
             severity="error",
         ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_text_hygiene")
     return issues
 
 
@@ -1674,6 +1757,8 @@ def validate_insight_grounding(
                         severity="error",
                     ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_grounding theme=%s pillar=%s", theme_key, pillar)
     return issues
 
 
@@ -1851,6 +1936,8 @@ def validate_insight_theme_consistency(
                         severity="error",
                     ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_theme_consistency theme=%s pillar=%s", theme_key, pillar)
     return issues
 
 
@@ -1912,6 +1999,8 @@ def insight_quality_gate(
             severity="error",
         ))
 
+    if not issues:
+        logger.info("validation.check_passed check=insight_quality_gate")
     return issues
 
 

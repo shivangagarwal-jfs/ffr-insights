@@ -39,11 +39,57 @@ These checks scan LLM-generated text for disallowed phrasing. Applied via `valid
 
 ---
 
-## 3. Summary-Specific Checks
+## 3. Compliance Screening
+
+Financial-advisory guardrails applied to **both** Summary and Insight output. The same regex pattern lists (`_COMPLIANCE_HIGH_RISK`, `_COMPLIANCE_MEDIUM_RISK`) are shared; behaviour on match differs by endpoint:
+
+| | Summary (`_screen_summary_compliance`) | Insights (`screen_insight_compliance`) |
+|---|---|---|
+| **Scanned text** | Full concatenated output (metric_summaries + pillar_summaries + overall_summary) | headline + description + CTA text per insight |
+| **High-risk match** | `ValidationIssue` with severity=error → triggers LLM retry | `ComplianceHit` with severity=high → insight card dropped |
+| **Medium-risk match** | `ValidationIssue` with severity=warning → logged, no retry | `ComplianceHit` with severity=medium → logged as warning |
+| **Check ID prefix** | `summary_compliance.<category>` | Category returned directly on `ComplianceHit` |
+
+### 3.1 High Risk — Applies To: **B**
+
+| Category | Examples of Matched Patterns |
+|----------|------------------------------|
+| `prescriptive_advice` | "you should", "must", "need to", "recommended to", "please buy/sell/invest" |
+| `product_solicitation` | "apply for a loan", "open an account", "invest in mutual fund", "change to plan" |
+| `product_ranking` | "best investment", "top fund", "ideal plan", "most suitable option" |
+| `guaranteed_returns` | "guaranteed", "risk-free", "100% safe", "will definitely", "fixed returns" |
+| `return_promises` | "double your money", "earn returns", "wealth quickly", "steady profits" |
+| `risk_minimization` | "no loss", "principal protected", "never lose", "impossible to lose" |
+| `tax_advice` | "avoid tax", "evade tax", "tax loophole", "tax hack" |
+| `legal_advice` | "legal advice", "consult a lawyer", "you must file", "legally required" |
+| `judgmental_profiling` | "you are poor/rich", "financially weak/irresponsible", "spending addict" |
+| `fear_urgency` | "urgent", "critical", "alarming", "act now", "serious problem" |
+
+### 3.2 Medium Risk — Applies To: **B**
+
+| Category | Examples of Matched Patterns |
+|----------|------------------------------|
+| `soft_advice` | "consider", "try to", "you may want to", "might want to", "could benefit from" |
+| `behavioral_judgment` | "overspending", "wasting money", "lifestyle inflation", "careless" |
+| `implied_recommendation` | "this means you should", "the best move is", "the right choice is" |
+
+### 3.3 Insight-Only Compliance — Applies To: **I**
+
+These additional patterns are checked only for insights (not summaries).
+
+| Category | Severity | Matched Pattern |
+|----------|----------|-----------------|
+| `lazy_generation` | high | "Insufficient data available" |
+| `fallback_text_leak` | high | "No insight generated" |
+| `fallback_text_leak` | high | "Derived signals are available but insufficient" |
+
+---
+
+## 4. Summary-Specific Checks
 
 All checks below are executed inside `validate_pillar_summary()` and apply **only to the Summary endpoint (S)**.
 
-### 3.1 Structural Checks
+### 4.1 Structural Checks
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
@@ -51,13 +97,13 @@ All checks below are executed inside `validate_pillar_summary()` and apply **onl
 | Response text presence | `response.empty` | error | At least some summary text must exist under `response.data`. |
 | Request ID match | `metadata.request_id` | error | Output `request_id` in metadata must match the input `request_id` (when `strict_request_id=True`). |
 
-### 3.2 Word-Count Limits
+### 4.2 Word-Count Limits
 
 | Check | ID | Severity | Max Words | Description |
 |-------|----|----------|-----------|-------------|
 | Metric summary length | `word_count.metric_summaries.<key>` | error | 25 | Each metric summary must not exceed 25 words. |
 
-### 3.3 Per-Metric Grounding (metric_summaries)
+### 4.3 Per-Metric Grounding (metric_summaries)
 
 These verify that numbers cited in each metric summary line match the input payload data.
 
@@ -76,11 +122,11 @@ These verify that numbers cited in each metric summary line match the input payl
 | Savings consistency grounding | `saving_consistency` | warning | "N out of M" pattern must match the sum of `saving_consistency` series over the trailing 12-month window. |
 | Tax filing status consistency | `tax_filing_status` | warning | Positive filing language (e.g. "filed", "compliant") must not appear when `tax_filing_status` is negative, and vice versa. |
 
-### 3.4 Overall Summary Grounding
+### 4.4 Overall Summary Grounding
 
-The same set of per-metric grounding checks (Section 3.3) are also applied against the concatenated `overall_summary` text (overview + whats_going_well + whats_needs_attention). IDs are prefixed with `overall_summary.`.
+The same set of per-metric grounding checks (Section 4.3) are also applied against the concatenated `overall_summary` text (overview + whats_going_well + whats_needs_attention). IDs are prefixed with `overall_summary.`.
 
-### 3.5 Directional Trend Checks
+### 4.5 Directional Trend Checks
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
@@ -89,19 +135,19 @@ The same set of per-metric grounding checks (Section 3.3) are also applied again
 | EMI burden trend direction | `directional.emi_burden` | warning | If EMI share rose, must not say it "eased". If fell, must not say "worsening". |
 | Investment rate trend direction | `directional.investment_rate` | warning | If rate fell, must not say it "accelerated". If rose, must not say "slippage/decline". |
 
-### 3.6 Rupee Pool Grounding
+### 4.6 Rupee Pool Grounding
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
 | Output rupee amount grounding | `output_rupee_grounding` | warning | Every `₹N` amount cited in the full concatenated output must trace back to the input payload — either exact match, near match (±1.5%), or a small subset-sum of known input amounts. Pool includes all monthly series values + scalar fields (emergency corpus, cover amounts, etc.). |
 
-### 3.7 Tax Regime Echo Check
+### 4.7 Tax Regime Echo Check
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
 | Old-regime concepts under new regime | `tax_regime` | warning | When `tax_regime='new'`, the tax pillar + overall summary must not reference old-regime concepts (e.g. "old regime", Section 80C/80D, NPS). |
 
-### 3.8 Persona Soft Gate
+### 4.8 Persona Soft Gate
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
@@ -109,11 +155,11 @@ The same set of per-metric grounding checks (Section 3.3) are also applied again
 
 ---
 
-## 4. Insight-Specific Checks
+## 5. Insight-Specific Checks
 
 All checks below apply **only to the Insights endpoint (I)**.
 
-### 4.1 Structural / Schema Validation — `validate_insight_structure()`
+### 5.1 Structural / Schema Validation — `validate_insight_structure()`
 
 | Check | Severity | Description |
 |-------|----------|-------------|
@@ -122,14 +168,14 @@ All checks below apply **only to the Insights endpoint (I)**.
 | Theme match | error | The `theme` field returned by the LLM must match the expected theme for the prompt. |
 | Strip LLM-set ID | — | Any `id` set by the LLM is silently removed (IDs are assigned deterministically). |
 
-### 4.2 Content Quality Filters
+### 5.2 Content Quality Filters
 
 | Check | Function | Severity | Description |
 |-------|----------|----------|-------------|
 | Generic placeholder detection | `is_generic_placeholder()` | error | Rejects throwaway descriptions like "Recent spending is around ₹X" without any comparative or analytical content. Triggers on descriptions < 12 chars or matching known generic patterns. |
 | Overloaded description detection | `is_overloaded_description()` | error | Rejects descriptions that are too dense or empty: > 29 words, > 320 chars, > 3 INR mentions, > 3 sentences, or empty string. |
 
-### 4.3 Insight Text Hygiene — `validate_insight_text_hygiene()`
+### 5.3 Insight Text Hygiene — `validate_insight_text_hygiene()`
 
 Extends the shared text hygiene checks (Section 2) with insight-specific patterns.
 
@@ -139,7 +185,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 | Markdown formatting leak | `insight_hygiene.markdown_leak` | error | Detects `**bold**`, `## headings`, bullet lists (`- `), or `` `code` `` in output. |
 | Reasoning chain leak | `insight_hygiene.reasoning_leak` | error | Detects chain-of-thought prefixes like "Based on the data", "Looking at the JSON", "Analyzing the", "Let me", etc. |
 
-### 4.4 Insight Grounding — `validate_insight_grounding()`
+### 5.4 Insight Grounding — `validate_insight_grounding()`
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
@@ -149,7 +195,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 | Tax saving index grounding | `insight_grounding.out_of_pattern` | error | For `tax_saving_utilization` / `tax_savings` themes: "N out of …" must match `tax_saving_index`. |
 | Saving consistency grounding | `insight_grounding.saving_consistency` | error | For `liquidity_resilience` theme: "N out of M" must match the saving_consistency trailing window sum. |
 
-### 4.5 Theme-Specific Consistency — `validate_insight_theme_consistency()`
+### 5.5 Theme-Specific Consistency — `validate_insight_theme_consistency()`
 
 | Check | ID | Severity | Applicable Themes | Description |
 |-------|----|----------|-------------------|-------------|
@@ -163,7 +209,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 | EMI burden direction | `insight_theme.emi_direction` | error | `emi_pressure`, `debt_concentration` | Eased/worsened language must match actual EMI burden trend. |
 | Investment rate direction | `insight_theme.investment_direction` | error | `investment_momentum`, `investment_consistency` | Increased/declined language must match actual investment rate trend. |
 
-### 4.6 Quality Gate — `insight_quality_gate()`
+### 5.6 Quality Gate — `insight_quality_gate()`
 
 | Check | ID | Severity | Description |
 |-------|----|----------|-------------|
@@ -172,42 +218,7 @@ Extends the shared text hygiene checks (Section 2) with insight-specific pattern
 | CTA mismatch | `insight_quality.cta_mismatch` | warning | CTA text must share at least one topical keyword with headline or description. |
 | Vague description | `insight_quality.vague_description` | error | Description > 30 chars that is entirely qualitative (no data points) is rejected. |
 
-### 4.7 Compliance Screening — `screen_insight_compliance()`
-
-Runs regex-based compliance checks against concatenated insight text (headline + description + CTA text). High-severity matches cause the insight card to be dropped entirely.
-
-#### High Risk (card dropped)
-
-| Category | Severity | Examples of Matched Patterns |
-|----------|----------|------------------------------|
-| `prescriptive_advice` | high | "you should", "must", "need to", "recommended to", "please buy/sell/invest" |
-| `product_solicitation` | high | "apply for a loan", "open an account", "invest in mutual fund", "change to plan" |
-| `product_ranking` | high | "best investment", "top fund", "ideal plan", "most suitable option" |
-| `guaranteed_returns` | high | "guaranteed", "risk-free", "100% safe", "will definitely", "fixed returns" |
-| `return_promises` | high | "double your money", "earn returns", "wealth quickly", "steady profits" |
-| `risk_minimization` | high | "no loss", "principal protected", "never lose", "impossible to lose" |
-| `tax_advice` | high | "avoid tax", "evade tax", "tax loophole", "tax hack" |
-| `legal_advice` | high | "legal advice", "consult a lawyer", "you must file", "legally required" |
-| `judgmental_profiling` | high | "you are poor/rich", "financially weak/irresponsible", "spending addict" |
-| `fear_urgency` | high | "urgent", "critical", "alarming", "act now", "serious problem" |
-
-#### Medium Risk (logged as warning, not dropped)
-
-| Category | Severity | Examples of Matched Patterns |
-|----------|----------|------------------------------|
-| `soft_advice` | medium | "consider", "try to", "you may want to", "might want to", "could benefit from" |
-| `behavioral_judgment` | medium | "overspending", "wasting money", "lifestyle inflation", "careless" |
-| `implied_recommendation` | medium | "this means you should", "the best move is", "the right choice is" |
-
-#### Insight-Specific Compliance
-
-| Category | Severity | Matched Pattern |
-|----------|----------|-----------------|
-| `lazy_generation` | high | "Insufficient data available" |
-| `fallback_text_leak` | high | "No insight generated" |
-| `fallback_text_leak` | high | "Derived signals are available but insufficient" |
-
-### 4.8 Cross-Insight Deduplication — `deduplicate_pillar_insights()`
+### 5.7 Cross-Insight Deduplication — `deduplicate_pillar_insights()`
 
 | Check | Severity | Description |
 |-------|----------|-------------|
@@ -233,7 +244,8 @@ LLM response
       ├── Directional trend checks (4 metrics)
       ├── Rupee pool grounding (global ₹ check)
       ├── Tax regime echo check
-      └── Persona soft gate
+      ├── Persona soft gate
+      └── Compliance screening (prescriptive/solicitation/guaranteed/legal/fear patterns)
   → ValidationReport(ok=bool, issues=[...])
 ```
 
